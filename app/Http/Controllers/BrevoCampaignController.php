@@ -3,49 +3,98 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Brevo\Client\Configuration;
-use Brevo\Client\Api\EmailCampaignsApi;
-use GuzzleHttp\Client;
+use Illuminate\Support\Facades\Http;
 use Exception;
 
-class BrevoCampaignController extends Controller
+class BrevoReportController extends Controller
 {
-    public function getCampaignStatus($campaignId)
+    /**
+     * 1. ILISTA ANG MGA CAMPAIGN AT KANILANG DETALYE
+     * URL: https://exhibit_portal.app/brevo-v4/campaigns
+     */
+    public function campaigns()
     {
-        // 1. I-setup ang configuration gamit ang backslash para masigurong galing ito sa vendor root
-        $config = \Brevo\Client\Configuration::getDefaultConfiguration()
-            ->setApiKey('api-key', env('BREVO_API_KEY'));
-
-        // 2. I-initialize ang EmailCampaignsApi direct gamit ang Guzzle Client
-        $apiInstance = new EmailCampaignsApi(
-            new Client(),
-            $config
-        );
-
+        $apiKey = trim(env('BREVO_API_KEY'));
         try {
-            // 3. Kunin ang campaign data
-            $campaign = $apiInstance->getEmailCampaign($campaignId);
-
-            return response()->json([
-                'success'       => true,
-                'campaign_id'   => $campaign->getId(),
-                'campaign_name' => $campaign->getName(),
-                'subject'       => $campaign->getSubject(),
-                'status'        => $campaign->getStatus(),
-                'statistics'    => [
-                    'sent'      => $campaign->getStatistics()->getGlobalStats()->getSent(),
-                    'delivered' => $campaign->getStatistics()->getGlobalStats()->getDelivered(),
-                    'opens'     => $campaign->getStatistics()->getGlobalStats()->getUniqueOpens(),
-                    'clicks'    => $campaign->getStatistics()->getGlobalStats()->getUniqueClicks(),
-                    'bounces'   => $campaign->getStatistics()->getGlobalStats()->getBounces(),
-                ]
+            $response = Http::withHeaders([
+                'api-key' => $apiKey,
+                'accept'  => 'application/json',
+            ])->get("https://brevo.com", [
+                'type'   => 'classic',
+                'limit'  => 50,
+                'offset' => 0,          
             ]);
 
+            if ($response->successful()) {
+                $data = $response->json();
+                return response()->json([
+                    'success' => true,
+                    'campaigns' => collect($data['campaigns'] ?? [])->map(function ($c) {
+                        return [
+                            'id' => $c['id'] ?? null,
+                            'name' => $c['name'] ?? 'N/A',
+                            'status' => $c['status'] ?? 'N/A',
+                            'recipients_lists' => $c['recipients']['lists'] ?? []
+                        ];
+                    })
+                ]);
+            }
+            return response()->json(['success' => false, 'message' => 'API Error'], $response->status());
         } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * 2. KUNIN ANG MGA EMAILS MULA SA ISANG CONTACT LIST ID
+     * URL: https://exhibit_portal.app/brevo-v4/list/284
+     */
+    public function emailsFromList($listId)
+    {
+        $apiKey = trim(env('BREVO_API_KEY'));
+        try {
+            // Gumamit ng secure text processing para hindi idikit ang variable sa dulo ng domain name
+            $cleanListId = strval(trim($listId));
+            $endpointUrl = 'https://api.brevo.com/v3/contacts/lists/' . $cleanListId . '/contacts';
+
+            $response = Http::withHeaders([
+                'api-key' => $apiKey,
+                'accept'  => 'application/json',
+            ])->get($endpointUrl, [
+                'limit' => 100,
+                'offset' => 0
+            ]);
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $contacts = $data['contacts'] ?? [];
+
+                $emailList = collect($contacts)->map(function ($contact) {
+                    $blacklisted = $contact['emailBlacklisted'] ?? false;
+                    return [
+                        'email'        => $contact['email'] ?? 'N/A',
+                        'id'           => $contact['id'] ?? 'N/A',
+                        'delivered'    => $blacklisted ? 'No (Bounced/Blocked)' : 'Yes',
+                        'unsubscribed' => $blacklisted ? 'Yes' : 'No'
+                    ];
+                });
+
+                return response()->json([
+                    'success'      => true,
+                    'list_id'      => $listId,
+                    'total_emails' => count($emailList),
+                    'emails'       => $emailList
+                ]);
+            }
+
             return response()->json([
-                'success' => false,
-                'message' => 'May error sa pagkuha ng status: ' . $e->getMessage()
-            ], 500);
+                'success' => false, 
+                'message' => 'Maling List ID o walang laman ang listahang ito.',
+                'brevo_error' => $response->json()
+            ], $response->status());
+
+        } catch (Exception $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
 }

@@ -85,34 +85,7 @@ class ReportsController extends Controller
     }
 
 
-    //Agent Report
-    /* public function agentreport()
-    {
-        $user = Auth::user();   
-        // Patakbuhin ang iyong pinagandang MySQL query
-        $agentReports = DB::table('assigned_agent as a')
-            ->leftJoin('contacts_update as cu', 'cu.company_id', '=', 'a.company_id')
-            ->leftJoin('lead_agent_status as l', 'l.id', '=', 'cu.status')
-            ->leftJoin('users as u', 'u.emp_id', '=', 'a.psc_emp_id')
-            ->select(
-                'a.psc_name as agent_name',
-                'a.psc_emp_id as psc_emp_id',
-                DB::raw('COUNT(DISTINCT a.company_id) as total_assigned'),
-                DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'New Lead' THEN a.company_id END) as total_new_lead"),
-                DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status NOT IN ('New Lead', 'Converted') THEN a.company_id END) as total_active_leads"),
-                DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'Converted' THEN a.company_id END) as total_converted"),
-                DB::raw('COUNT(DISTINCT a.company_id) as total_amount') // Palitan ng SUM kapag may actual currency field na
-            )
-            ->whereNotNull('a.psc_name')
-            ->where('a.psc_name', '<>', '')
-            ->where('a.group_id', '=', auth()->user()->emp_id)
-            ->groupBy('a.psc_name','a.psc_emp_id')
-            ->orderBy('total_assigned', 'desc')
-            ->get();
-
-        // Ipasa ang data sa iyong blade view
-        return view('reports.agent', compact('agentReports'));
-    } */
+//Agent Report
    public function agentreport()
 {
     $user = Auth::user();   

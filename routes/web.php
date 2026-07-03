@@ -191,7 +191,38 @@ Route::get('/company/files/{company_id}', [AssignedController::class, 'getCompan
 
 
 
-Route::get('/brevo/campaign/{id}', [BrevoCampaignController::class, 'getCampaignStatus']);
+
+
+
+
+
+
+use App\Http\Controllers\BrevoReportController;
+
+/* Route::get('/', function () {
+    return view('welcome');
+}); */
+
+// Mga bagong ruta na gagamit ng GuzzleClient engine natin
+Route::get('/brevo-v5/campaigns', [BrevoReportController::class, 'campaigns']);
+Route::get('/brevo-v5/campaign-report/{id}', [BrevoReportController::class, 'getEmailsByCampaign']);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

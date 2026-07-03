@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\LeadStatusUpdateController;
 use App\Http\Controllers\Api\APIParticipantController;
 use App\Http\Controllers\Api\CompanyListController;
 use App\Http\Controllers\Api\UserListController;
+use App\Http\Controllers\BrevoCampaignController; //For Email Blust Campaign
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -39,3 +40,7 @@ Route::get('/participant-images/{id}', [APIParticipantController::class, 'getIma
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+
+Route::post('/brevo-webhook', [BrevoCampaignController::class, 'handleBrevoWebhook']);
+

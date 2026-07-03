@@ -404,7 +404,7 @@ function loadAttendance()
                 <div class="contact-info-block">
                     <div class="contact-name" style="color:#8F6E03; font-weight:bold;">${row.contact_name || ''}</div>
                     <div class="contact-item">
-                        <i class="fas fa-envelope contact-icon" style="color:#01454A;"></i> ${row.email || '—'}
+                        <i class="fas fa-envelope contact-icon" style="color:#01454A;"></i> ${row.contact_email || '—'}
                     </div>
                     <div class="contact-item">
                         <i class="fas fa-phone contact-icon" style="color:#402101;"></i> ${row.phone || '—'}
@@ -412,7 +412,7 @@ function loadAttendance()
                 </div>
             `;
         }
-    },
+    }, 
 
         { data: 'remarks', name: 'attendance.remarks' },
         { data: 'date', name: 'attendance.date' },

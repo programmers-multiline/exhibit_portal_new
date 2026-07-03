@@ -12,6 +12,10 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        '/login-via-oms'
+        '/login-via-oms',
+         'api/brevo-webhook'
     ];
+
+   
+
 }
