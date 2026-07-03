@@ -3,65 +3,38 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
 use Exception;
 
 class BrevoReportController extends Controller
 {
     /**
-     * 1. ILISTA ANG MGA CAMPAIGN AT KANILANG RECIPIENT LISTS
-     * URL: https://exhibit_portal.app/brevo-v5/campaigns
+     * Kunin ang lahat ng email contacts mula sa mga listahan ng isang partikular na campaign.
+     *
+     * @param  mixed  $campaignId
+     * @return \Illuminate\Http\JsonResponse
      */
-    public function campaigns()
-    {
-        $apiKey = trim(env('BREVO_API_KEY'));
-
-        // Native PHP cURL setup para direktang tumawag nang walang framework abstraction layer
-        $ch = curl_init();
-        curl_setopt($ch, CURLOPT_URL, 'https://api.brevo.com/v3/emailCampaigns');
-        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'api-key: ' . $apiKey,
-            'accept: application/json'
-        ]);
-
-        $response = curl_exec($ch);
-        $statusCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-        curl_close($ch);
-
-        if ($statusCode === 200) {
-            $data = json_decode($response, true);
-            return response()->json([
-                'success' => true,
-                'campaigns' => collect($data['campaigns'] ?? [])->map(function ($c) {
-                    return [
-                        'id' => $c['id'] ?? null,
-                        'name' => $c['name'] ?? 'N/A',
-                        'status' => $c['status'] ?? 'N/A',
-                        'recipients_lists' => $c['recipients']['lists'] ?? []
-                    ];
-                })
-            ]);
-        }
-
-        return response()->json([
-            'success' => false,
-            'message' => 'API Error mula sa Brevo.',
-            'status_code' => $statusCode,
-            'raw_response' => json_decode($response, true)
-        ], $statusCode);
-    }
-
- 
-//Working
-       public function getEmailsByCampaign($campaignId)
+    public function getEmailsByCampaign($campaignId)
     {
         $apiKey = trim(env('BREVO_API_KEY'));
         $cleanCampaignId = intval(trim($campaignId));
 
+        // Siguraduhing may API key na nakalagay sa .env file
+        if (empty($apiKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'BREVO_API_KEY is not configured in your environment configuration.'
+            ], 500);
+        }
+
         try {
-            // Hakbang A: Kunin ang Campaign Details gamit ang Native PHP cURL
+            // =========================================================================
+            // HAKBANG A: KUNIN ANG CAMPAIGN DETAILS GAMIT ANG NATIVE PHP cURL
+            // =========================================================================
             $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, 'https://api.brevo.com/v3/emailCampaigns/' . $cleanCampaignId);
+            curl_setopt($ch, CURLOPT_URL, 'https://brevo.com' . $cleanCampaignId);
             curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'api-key: ' . $apiKey,
@@ -75,14 +48,12 @@ class BrevoReportController extends Controller
             if ($campaignStatus !== 200) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Hindi mahanap ang Campaign ID ' . $cleanCampaignId
+                    'message' => 'Hindi mahanap ang Campaign ID ' . $cleanCampaignId . ' o may error sa Brevo API.'
                 ], $campaignStatus);
             }
 
             $campaignData = json_decode($campaignResponse, true);
             $listIds = $campaignData['recipients']['lists'] ?? [];
-
-            // Naitama: 'name' ang tamang key mula sa Brevo API payload para sa pangalan ng campaign
             $campaignName = $campaignData['name'] ?? 'N/A';
 
             if (empty($listIds)) {
@@ -96,49 +67,82 @@ class BrevoReportController extends Controller
 
             $allEmails = collect();
 
-            // Hakbang B: I-loop ang bawat List ID gamit ang Native PHP cURL para kunin ang mga emails
+            // =========================================================================
+            // HAKBANG B: I-LOOP ANG BAWAT LIST ID AT GAMITAN NG PAGINATION (LIMIT/OFFSET)
+            // =========================================================================
             foreach ($listIds as $listId) {
                 $cleanListId = intval(trim($listId));
+                
+                $limit = 500; // Pinakamataas na limit na pinapayagan ng Brevo kada request
+                $offset = 0;
+                $hasMoreContacts = true;
 
-                $chList = curl_init();
-                curl_setopt($chList, CURLOPT_URL, 'https://api.brevo.com/v3/contacts/lists/' . $cleanListId . '/contacts');
-                curl_setopt($chList, CURLOPT_RETURNTRANSFER, true);
-                curl_setopt($chList, CURLOPT_HTTPHEADER, [
-                    'api-key: ' . $apiKey,
-                    'accept: application/json'
-                ]);
+                while ($hasMoreContacts) {
+                    // Idagdag ang pagination limits sa dulo ng URL query string
+                    $url = "https://brevo.com{$cleanListId}/contacts?limit={$limit}&offset={$offset}";
 
-                $contactsResponse = curl_exec($chList);
-                curl_close($chList);
-
-                $contactsData = json_decode($contactsResponse, true);
-                $contacts = $contactsData['contacts'] ?? [];
-
-                foreach ($contacts as $contact) {
-                    $blacklisted = $contact['emailBlacklisted'] ?? false;
-                    $allEmails->push([
-                        'campaign_id'   => $cleanCampaignId,
-                        'campaign_name' => $campaignName,
-                        'from_list_id'  => $cleanListId,
-                        'email'         => $contact['email'] ?? 'N/A',
-                        'id'            => $contact['id'] ?? 'N/A',
-                        'delivered'     => $blacklisted ? 'No' : 'Yes', // Binago sa 'Yes/No' para mag-match sa screenshot niyo
-                        'unsubscribed'  => $blacklisted ? 'Yes' : 'No'
+                    $chList = curl_init();
+                    curl_setopt($chList, CURLOPT_URL, $url);
+                    curl_setopt($chList, CURLOPT_RETURNTRANSFER, true);
+                    curl_setopt($chList, CURLOPT_HTTPHEADER, [
+                        'api-key: ' . $apiKey,
+                        'accept: application/json'
                     ]);
+
+                    $contactsResponse = curl_exec($chList);
+                    $contactsStatus = curl_getinfo($chList, CURLINFO_HTTP_CODE);
+                    curl_close($chList);
+
+                    // Kung nagkaroon ng error ang request sa contacts, ihinto ang kasalukuyang listahan
+                    if ($contactsStatus !== 200) {
+                        Log::error("Brevo API Error for List ID {$cleanListId}: Status {$contactsStatus}");
+                        $hasMoreContacts = false;
+                        break;
+                    }
+
+                    $contactsData = json_decode($contactsResponse, true);
+                    $contacts = $contactsData['contacts'] ?? [];
+
+                    // Kung blanko o walang ibinalik na contacts, tapos na ang listahan
+                    if (empty($contacts)) {
+                        $hasMoreContacts = false;
+                        break;
+                    }
+
+                    foreach ($contacts as $contact) {
+                        $blacklisted = $contact['emailBlacklisted'] ?? false;
+                        $allEmails->push([
+                            'campaign_id'   => $cleanCampaignId,
+                            'campaign_name' => $campaignName,
+                            'from_list_id'  => $cleanListId,
+                            'email'         => $contact['email'] ?? 'N/A',
+                            'id'            => $contact['id'] ?? 'N/A',
+                            'delivered'     => $blacklisted ? 'No' : 'Yes',
+                            'unsubscribed'  => $blacklisted ? 'Yes' : 'No'
+                        ]);
+                    }
+
+                    // Kung mas mababa sa 500 ang nakuha natin, ibig sabihin ito na ang huling pahina
+                    if (count($contacts) < $limit) {
+                        $hasMoreContacts = false;
+                    } else {
+                        // I-adjust ang offset para sa susunod na batch (halimbawa: 0 -> 500 -> 1000)
+                        $offset += $limit;
+                    }
                 }
             }
 
-            // Alisin ang mga duplicate rows kung may contact na kasapi sa magkaibang grupo
+            // Alisin ang mga duplicate rows kung may contact na kasapi sa magkaibang listahan
             $uniqueEmails = $allEmails->unique('email')->values();
 
             // =========================================================================
-            // BAGONG DAGDAG: DIREKTANG PAG-INSERT AT UPDATE SA DATA BASE TABLE
+            // HAKBANG C: DIREKTANG PAG-INSERT AT UPDATE SA DATABASE TABLE
             // =========================================================================
             foreach ($uniqueEmails as $item) {
                 // Tukuyin ang standard status batay sa unsubscribe status
                 $finalStatus = ($item['unsubscribed'] === 'Yes') ? 'unsubscribed' : 'delivered';
 
-                \Illuminate\Support\Facades\DB::table('campaign_recipients')->updateOrInsert(
+                DB::table('campaign_recipients')->updateOrInsert(
                     [
                         // UNIQUE FIELDS (Dito binebase kung mag-a-update o mag-i-insert ng bago)
                         'campaign_id' => strval($item['campaign_id']),
@@ -159,7 +163,6 @@ class BrevoReportController extends Controller
                     ]
                 );
             }
-            // =========================================================================
 
             return response()->json([
                 'success'       => true,
@@ -171,11 +174,13 @@ class BrevoReportController extends Controller
             ]);
 
         } catch (Exception $e) {
+            // I-log ang error para madaling i-debug sakaling magkaproblema
+            Log::error("Error in getEmailsByCampaign: " . $e->getMessage());
+
             return response()->json([
                 'success' => false,
-                'message' => 'Internal Error: ' . $e->getMessage()
+                'message' => 'Internal Server Error: ' . $e->getMessage()
             ], 500);
         }
-    } 
-
+    }
 }
