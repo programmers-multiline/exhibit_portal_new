@@ -194,6 +194,23 @@ use App\Http\Controllers\BrevoReportController;
 Route::get('/brevo-v5/campaigns', [BrevoReportController::class, 'campaigns']);
 Route::get('/brevo-v5/campaign-report/{id}', [BrevoReportController::class, 'getEmailsByCampaign']);
 
+//para mailabas ang statistic ng receiver
+
+
+// Route para sa pagkuha ng report ng campaign
+Route::get('/brevo/campaign/{campaignId}/report', [BrevoReportController::class, 'getCampaignEngagementReport']);
+
+
+
+
+Route::get('/brevo/campaign/{campaignId}/display', [BrevoReportController::class, 'showCampaignEngagement']);
+
+
+
+
+
+
+
 
 
 
