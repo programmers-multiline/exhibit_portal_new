@@ -122,7 +122,7 @@ class ContactImportController extends Controller
                         'attendance.phone',
                         'attendance.email as contact_email', 
                         'attendance.remarks',
-                        'users.name as Entry_by',
+                        'users.last_name as Entry_by',
                         'assigned_agent.psc_name',
                         'ua.last_name'         
                     ]); // May semicolon na rito para i-save sa variable
@@ -149,7 +149,7 @@ class ContactImportController extends Controller
                                .$row->last_name.
                            '</span>';
                 } else if (in_array(auth()->user()->position_id, [13, 237, 158])) {
-                    return '<input type="checkbox" class="participant_checkbox" value="'.$row->company_id.'">';
+                    return '<input type="checkbox" class="participant_checkbox" value="'.$row->company_id.'" style="width: 14px; height: 14px; transform: scale(1.5); cursor: pointer;">';
                 } else {
                     return '--';
                 }
@@ -480,13 +480,14 @@ public function UpdateContactDetails(Request $request)
 public function ContactUpdateStatus(Request $request, $id)
 {
 
-    //Nilabas ko ito for better error return result
-     $request->validate([
-                        'status'        => 'required',
-                        'customer_code' => 'required_if:status,10',
-                        'files'         => 'required_if:status,9',
-                        'files.*'       => 'file|mimes:pdf,jpg,png,jpeg|max:2048',
-                    ]);
+
+    $request->validate([
+    'status'        => 'required',
+    'customer_code' => 'required_if:status,10',
+    'files'         => 'required_if:status,9|array', // Dinagdagan ng |array
+    'files.*'       => 'file|mimes:pdf,jpg,png,jpeg|max:2048',
+]);
+
 
     try {
 
@@ -511,26 +512,33 @@ public function ContactUpdateStatus(Request $request, $id)
         ]);
 
         // 🔥 ONLY RUN IF STATUS = 9
-        if ((int)$request->status === 9) {
+         if ($request->status == 9) {
 
-            /* if (!$request->hasFile('files')) {
+            if (!$request->hasFile('files')) {
                 throw new \Exception("Signed proposal file is required.");
-            } */
+            }
 
             foreach ($request->file('files') as $file) {
+                
+                // Siguraduhing valid ang file bago i-store
+                if ($file->isValid()) {
+                    $path = $file->store('contact_files', 'public');
 
-                $path = $file->store('contact_files', 'public');
-
-                ContactsFile::create([
-                    'company_id' => $id,
-                    'file_path'   => $path,
-                    'file_name'   => $file->getClientOriginalName(),
-                    'file_type'   => $file->getClientMimeType(),
-                    'uploaded_by' => $user->emp_id,
-                    'uploaded_at' => now()
-                ]);
+                    ContactsFile::create([
+                        'company_id'  => $id,
+                        'status_id'  =>  $request->status,
+                        'file_path'   => $path,
+                        'file_name'   => $file->getClientOriginalName(),
+                        'file_type'   => $file->getClientMimeType(),
+                        'uploaded_by' => $user->emp_id,
+                        'uploaded_at' => now()
+                    ]);
+                }
             }
         }
+       // 🔥 ONLY RUN IF STATUS = 9
+
+
 
          if ((int)$request->status === 10) {
 

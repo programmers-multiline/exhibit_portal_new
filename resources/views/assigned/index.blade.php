@@ -30,16 +30,21 @@
         <div class="main-container bg-white shadow-sm p-2 border rounded d-flex flex-column" style="width: 330px; height: auto; font-size: 0.75rem !important; flex-shrink: 0;">
 
             <!-- 1. HEADER SECTION (Fixed Height) -->
-            <div class="company-header-card header-bg p-3 rounded-top d-flex justify-content-between align-items-center mb-2" style="height: 60px;">
-                <div class="text-truncate" style="max-width: 85%;">
-                    <h6 class="fw-bold m-0 text-uppercase tracking-wide text-truncate" style="color:whitesmoke;font-size: 0.90rem;" title="{{ $companyData['company_name'] }}">
+            <div class="company-header-card header-bg p-3 rounded-top d-flex justify-content-between align-items-center mb-2" style="height: auto;">
+                <div class="text-break w-100" >
+                    <h6 class="fw-bold m-0 text-uppercase tracking-wide" style="color:whitesmoke;font-size: 0.90rem;" title="{{ $companyData['company_name'] }}">
                         {{ $companyData['company_name'] }}
                     </h6>
-                    <small class="text-muted-custom text-truncate d-block">
-                        {{ $companyData['address'] }} <i class="far fa-edit ms-1" style="font-size: 0.7rem;"></i>
+                  
+                    <small class="text-muted-custom d-block  text-break w-100" style="white-space: normal !important;">
+                        <i class="fas fa-map-marker-alt address-icon text-success h6"></i>  
+                        {{ $companyData['address'] }} 
+                        <i class="far fa-edit ms-1" style="font-size: 0.7rem;" id="EditAddress"></i>
                     </small>
+
+                    
                 </div>
-                <i class="fas fa-building fs-4 text-muted-custom flex-shrink-0"></i>
+                <i class="fas fa-building fs-4 text-muted-custom flex-shrink-0 h3 text-white"></i>
             </div>
 
             <!-- 2. LEAD PIPELINE SECTION (Fixed Height) -->
@@ -52,10 +57,10 @@
                     <div class="progress-bar progress-bar-custom" role="progressbar" style="width: {{ $companyData['status_percentage'] }};"></div>
                 </div>
                  @if (in_array(auth()->user()->position_id, [13, 237,158]))
-                <div class="form-check m-0">
-                    <input class="form-check-input border-danger participant_checkbox" type="checkbox" id="checkAssign_{{ $loop->index }}" value="{{$companyData['company_id']}}">
-                    <label class="form-check-label text-danger fw-medium" for="checkAssign_{{ $loop->index }}">
-                        Check to Change PSC
+                <div class="form-check m-0 ">
+                    <input class="form-check-input border-danger mt-0 participant_checkbox" type="checkbox" id="checkAssign_{{ $loop->index }}" value="{{$companyData['company_id']}}">
+                    <label class="form-check-label text-danger fw-medium d-inline-flex align-items-center justify-content-center" style="cursor:pointer;" for="checkAssign_{{ $loop->index }}">
+                        Change PSC
                     </label>
                 </div>
                 @endif
@@ -123,11 +128,12 @@
                         <span class="font-weight-bold d-block m-0 text-uppercase text-truncate" style="font-size: 0.75rem;">
                            &nbsp; {{ $companyData['AgentName'] }}
                         </span>
+                        
                     </div>
                 </div>
 
                 <!-- Fixed Height Update Inner Box -->
-                <div class="update-box p-1 " style="height: 110px;">
+                <div class="update-box p-1 " style="height: auto;">
                     <div class="bg-white p-2 rounded border shadow-sm h-100" style="overflow: hidden;">
                         <div class="d-flex justify-content-between align-items-center mb-1">
                                 @if($companyData['lead_status']=='No Update Yet')
@@ -138,7 +144,10 @@
                              <span class="badge bg-success text-white py-0.5 px-1.5" style="font-size: 0.6rem;">
                                 {{ $companyData['lead_status'] }}
                             </span>
+                            
                             @endif
+
+                            
 
                             <small class="text-muted" style="font-size: 0.6rem;">
                                 @if($companyData['UpdateTime'] && $companyData['UpdateTime'] !== '--')
@@ -151,6 +160,15 @@
                         <p class="m-0 text-dark fst-italic lh-sm text-wrap" style="font-size: 0.7rem; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;">
                             {{ $companyData['UpdateRemarks'] }}
                         </p>
+                            <br>
+                           <!--  <a href="{{ asset('storage/' . $companyData['file_path']) }}" target="_blank" class="btn btn-outline-success btn-sm"> -->
+                            <!-- <i class="fas fa-file-download"></i>  -->
+                            <button class="btn btn-outline-success btn-sm view-files-btn" data-companyid="{{ $companyData['company_id'] }}"><i class=" fas fa-file-pdf" style="color:crimson;"></i>&nbsp;View Files</button>
+                            &nbsp;
+                             <!-- </a> -->
+                            
+                        
+
                     </div>
                 </div>
             </div>
@@ -169,8 +187,37 @@
 </div>
 <!-- Ending of container mt-4 -->
 
- 
+ <!-- Modal to View Files -->
+  <div class="modal fade" id="filesModal" tabindex="-1" aria-labelledby="filesModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="filesModalLabel"><i class="fas fa-folder-open text-warning"></i> Company Uploaded Files</h5>
+               <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="background: none; border: none; font-size: 1.5rem; color: #000; cursor: pointer;">
+    <span aria-hidden="true">&times;</span>
+</button>
 
+            </div>
+            <div class="modal-body">
+                <table class="table table-bordered table-striped w-100" id="filesTable" >
+                    <thead class="table-dark" >
+                        <tr>
+                            <th style="font-size:10px;">File Name</th>
+                            <th style="font-size:10px;">Uploaded By</th>
+                            <th style="font-size:10px;">Date Uploaded</th>
+                            <th style="font-size:10px;" class="text-center" >Action</th>
+                        </tr>
+                    </thead>
+                    <tbody style="font-size:10px;">
+                        <!-- Dito papasok ang mga files gamit ang jQuery -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ending of Modal to View Files -->
 
 
 
@@ -252,10 +299,15 @@
       
       <div class="modal-header">
         <h5 class="modal-title">You are Updating the status of</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="background: none; border: none; font-size: 1.5rem; color: #000; cursor: pointer;">
+    <span aria-hidden="true">&times;</span>
+</button>
+
       </div>
 
       <div class="modal-body">
+        <form id="yourFormId" enctype="multipart/form-data">
+
         <input type="hidden" id="company_id">
          <p id="CompanyName" class="text-white p-2" style="background-color:#1e1f71; color:whitesmoke;"></p>   
         <div class="mb-3">
@@ -272,7 +324,7 @@
 
         <div class="mb-3" id="signedProposalFileWrapper" style="display:none;">
             <label>Upload Signed Proposal</label>
-            <input type="file" class="form-control" id="signed_proposal_file">
+            <input type="file" class="form-control" id="signed_proposal_file" multiple>
         </div>
 
         <div class="mb-3" id="customerCodeWrapper" style="display:none;">
@@ -289,12 +341,14 @@
         
 
       </div>
+      <!-- Ending of modal-body  -->
 
       <div class="modal-footer">
         <button type="button" class="btn btn-success" id="saveStatus">
             Save
         </button>
       </div>
+</form>
 
     </div>
   </div>
@@ -343,7 +397,9 @@
       
       <div class="modal-header">
         <h5 class="modal-title">Update Contact Details Form</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="background: none; border: none; font-size: 1.5rem; color: #000; cursor: pointer;">
+    <span aria-hidden="true">&times;</span>
+</button>
       </div>
 
       <div class="modal-body">
@@ -402,6 +458,63 @@
 </style>
 
 <script>
+
+//Jquery to view files
+$('.view-files-btn').click(function() {
+    var companyId = $(this).data('companyid');
+    var tbody = $('#filesTable tbody');
+    
+    // Linisin muna ang table at magpakita ng loading text
+    tbody.html('<tr><td colspan="4" class="text-center">Loading files, please wait...</td></tr>');
+    
+    // Buksan ang modal
+    $('#filesModal').modal('show');
+    
+    // Patakbuhin ang AJAX request
+    $.ajax({
+        url: "/company/files/" + companyId,
+        type: "GET",
+        dataType: "JSON",
+        success: function(data) {
+            tbody.empty(); // Alisin ang loading text
+            
+            if (data.length === 0) {
+                tbody.html('<tr><td colspan="4" class="text-center text-muted">No files uploaded for this company.</td></tr>');
+                return;
+            }
+            
+            // I-loop ang bawat file na nanggaling sa controller query
+            $.each(data, function(index, file) {
+                // Siguraduhing tama ang storage path helper link mo sa windows/laragon
+                var fileUrl = "{{ asset('storage') }}/" + file.file_path;
+                var uploadedDate = file.uploaded_at ? new Date(file.uploaded_at).toLocaleDateString() : '--';
+                var uploaderName = file.uploaded_by_name ? file.uploaded_by_name : 'System';
+
+                var row = `<tr>
+                    <td><i class="fas fa-file-pdf text-danger text-secondary me-2"></i>
+                    
+                    &nbsp;<a href="${fileUrl}" target="_blank">${file.file_name} </a></td>
+                    <td>${uploaderName}</td>
+                    <td>${uploadedDate}</td>
+                    <td class="text-center">
+                        <a href="${fileUrl}" target="_blank">
+                            <i class="fas fa-eye" title="Open"></i> 
+                        </a>
+                    </td>
+                </tr>`;
+                
+                tbody.append(row);
+            });
+        },
+        error: function(xhr) {
+            tbody.html('<tr><td colspan="4" class="text-center text-danger">Failed to fetch files. Please try again.</td></tr>');
+        }
+    });
+});
+
+
+
+
 
 //Use to update status of attendees
 $('#saveStatus').click(function(){
@@ -477,7 +590,30 @@ $('#saveStatus').click(function(){
                         {
                          window.location.reload();
                         }, 2000);
-        }
+        },
+            error: function(xhr) {
+                // Kung validation error (Status 422)
+                if (xhr.status === 422) {
+                    let errors = xhr.responseJSON.errors;
+                    let errorMsg = '';
+                    $.each(errors, function(key, value) {
+                        errorMsg += value[0] + '<br>';
+                    });
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Validation Error',
+                        html: errorMsg
+                    });
+                } else {
+                    // Kung Server Error (Status 500 mula sa try-catch)
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Server Error',
+                        text: xhr.responseJSON.error || 'Something went wrong.'
+                    });
+                }
+            }
     });
 
 });

@@ -55,6 +55,7 @@ $rawResults = DB::table('company_list as cm') // 1. Main table is already cm
         'cu.status as ContactUpdate',
         'cu.description as UpdateRemarks',
         'cu.created_at as UpdateTime',
+        'cf.file_path as file_path',
         'l.lead_status',
         'u.position_id',
         'l.status_percentage',
@@ -63,6 +64,7 @@ $rawResults = DB::table('company_list as cm') // 1. Main table is already cm
     // 2. Removed the duplicate leftJoin('company_list as cm'...) from here
     ->leftJoin('contacts as c', 'c.company_id', '=', 'cm.id')
     ->leftJoin('contacts_update as cu', 'cu.company_id', '=', 'cm.id')
+    ->leftJoin('contacts_files as cf', 'cf.company_id', '=', 'cu.company_id')
     ->leftJoin('assigned_agent as a', 'a.company_id', '=', 'cm.id')
     ->leftJoin('lead_agent_status as l', 'l.id', '=', 'cu.status')
     ->leftJoin('users as u', 'u.emp_id', '=', 'a.psc_emp_id')
@@ -101,6 +103,8 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
         'status_percentage' => $last->status_percentage ?? 'No Percent',
         'UpdateRemarks'     => $last->UpdateRemarks ?? 'No Remarks Available',
         'UpdateTime'        => $last->UpdateTime ?? '--',
+        'file_path'         => $last->file_path ?? 'No File',
+        
 
         'contacts'          => $rows->map(function($row) {
             return [
@@ -115,6 +119,7 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
 
  $lead_agent_status = DB::table('lead_agent_status')->get();
  $user_group        = DB::table('users')->where('group_id',$user->emp_id)->get();
+ $contact_files     = DB::table('contacts_files')->get();
 
  //use to refresh the Card page
  if ($request->ajax()) {
@@ -123,13 +128,28 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
     ]);
 }
 
-return view('assigned.index', compact('companies','lead_agent_status','user_group','user'));
+return view('assigned.index', compact('companies','lead_agent_status','user_group','user','contact_files'));
    
        // return view('assigned.index');
     
         }
 
        
+public function getCompanyFiles($company_id)
+{
+    $files = DB::table('contacts_files as cf')
+        ->select([
+            'cf.file_path',
+            'cf.file_name',
+            'u.name as uploaded_by_name',
+            'cf.uploaded_at' // Pinalitan ko ng uploaded_at base sa model mo kanina, baguhin kung created_at talaga sa db
+        ])
+        ->leftJoin('users as u', 'u.emp_id', '=', 'cf.uploaded_by')
+        ->where('cf.company_id', $company_id)
+        ->get();
+
+    return response()->json($files);
+}
 
 
 

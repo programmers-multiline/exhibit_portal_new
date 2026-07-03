@@ -58,13 +58,13 @@
             <div class="modal-body">
                 <div class="table-responsive shadow-sm rounded border p-2">
                     <table class="table table-hover align-middle mb-0 w-100" id="leadsDataTable">
-                        <thead class="table-dark text-uppercase fs-7 tracking-wider">
+                        <thead class="table-dark text-uppercase tracking-wider" style="font-size: 0.75rem;">
                             <tr>
-                                <th scope="col" class="py-3 px-4 text-start">Company Name</th>
-                                <th scope="col" class="py-3 px-3 text-start">Address</th>
-                                <th scope="col" class="py-3 px-3 text-center">Lead Status</th>
-                                <th scope="col" class="py-3 px-3 text-start">Last Update Description</th>
-                                <th scope="col" class="py-3 px-4 text-end">Update Date</th>
+                                <th scope="col" class="py-2 px-4 text-start">Company Name</th>
+                                <th scope="col" class="py-2 px-3 text-start">Address</th>
+                                <th scope="col" class="py-2 px-3 text-center">Lead Status</th>
+                                <th scope="col" class="py-2 px-3 text-start">Last Update Description</th>
+                                <th scope="col" class="py-2 px-4 text-end">Update Date</th>
                             </tr>
                         </thead>
                         <tbody id="modalTableBody" class="text-secondary fs-6">

@@ -11,6 +11,7 @@ class ContactsFile extends Model
     protected $table    = 'contacts_files';
     protected $fillable = [
         'company_id',
+        'status_id',
         'file_path',
         'file_name',
         'file_type',

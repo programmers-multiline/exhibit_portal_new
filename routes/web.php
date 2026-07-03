@@ -14,7 +14,9 @@ use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\CustomerList;
 use App\Http\Controllers\ContactImportController;
 use App\Http\Controllers\AssignedController;
+use Illuminate\Support\Facades\Storage;
 
+use App\Http\Controllers\BrevoCampaignController; //For Email Blust Campaign
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -182,4 +184,14 @@ Route::get('/reports/agent-performance', [ReportsController::class, 'agentreport
 
 // Dito tatawag ang AJAX para kumuha ng detalye kada agent
 Route::get('/reports/agent-details', [ReportsController::class, 'getAssignedDetails'])->name('reports.agent.details');
+
+
+Route::get('/company/files/{company_id}', [AssignedController::class, 'getCompanyFiles']);
+
+
+
+
+Route::get('/brevo/campaign/{id}', [BrevoCampaignController::class, 'getCampaignStatus']);
+
+
 

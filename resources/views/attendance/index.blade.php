@@ -117,7 +117,7 @@
                         <th>Contact Info</th>
                         <th>Remarks</th>
                         <th>Date Collected</th>
-                        <th class="text-center" style="width: 100px;">Action</th>
+                        <th class="text-center" style="width: 100px;">Assisted By</th>
                     </tr>
                 </thead>
                 <tbody class="fs-6 text-secondary">
@@ -376,19 +376,6 @@ function loadAttendance()
             }
         },
 
-   /*      columns: [
-            { data: 'checkbox', name: 'checkbox'},
-            { data: 'exhibit_name', name: 'attendance.exhibit_name' },
-            { data: 'company_name', name: 'company_list.company_name' },
-            { data: 'address', name: 'company_list.address' },
-            { data: 'contact_name', name: 'attendance.name' },
-            { data: 'contact_email', name: 'attendance.email' },
-            { data: 'phone',name: 'attendance.phone' },
-            { data: 'remarks',name: 'attendance.remarks' },
-            { data: 'date', name: 'attendance.date' },
-            { data: 'action', name: 'action', orderable: false, searchable: false }
-      
-        ], */
   columns: [
         { data: 'checkbox', name: 'checkbox'},
         { data: 'exhibit_name', name: 'attendance.exhibit_name' },
@@ -429,13 +416,14 @@ function loadAttendance()
 
         { data: 'remarks', name: 'attendance.remarks' },
         { data: 'date', name: 'attendance.date' },
-        { data: 'action', name: 'action', orderable: false, searchable: false }
+       /*  { data: 'action', name: 'action', orderable: false, searchable: false } */
+        { data: 'Entry_by', name: 'users.last_name' },
     ],
 
     // DITO ILALAGAY ANG LOGIC PARA SA WORD BREAK AT ALIGNMENT
     columnDefs: [
         {
-            targets: [2,3], // Index ng columns na apektado (0-based index: 3 = address, 5 = email)
+            targets: [2,3,4], // Index ng columns na apektado (0-based index: 3 = address, 5 = email)
             className: 'address-wrap' // Custom CSS class na gagawin natin sa ibaba
         },
         {
