@@ -16,7 +16,6 @@ use App\Http\Controllers\ContactImportController;
 use App\Http\Controllers\AssignedController;
 use Illuminate\Support\Facades\Storage;
 
-use App\Http\Controllers\BrevoCampaignController; //For Email Blust Campaign
 /*
 |--------------------------------------------------------------------------
 | Web Routes
@@ -193,19 +192,33 @@ Route::get('/company/files/{company_id}', [AssignedController::class, 'getCompan
 
 
 
-
-
+Route::get('/', function () {
+    return view('welcome');
+});
 
 
 use App\Http\Controllers\BrevoReportController;
 
-/* Route::get('/', function () {
-    return view('welcome');
-}); */
-
-// Mga bagong ruta na gagamit ng GuzzleClient engine natin
 Route::get('/brevo-v5/campaigns', [BrevoReportController::class, 'campaigns']);
 Route::get('/brevo-v5/campaign-report/{id}', [BrevoReportController::class, 'getEmailsByCampaign']);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

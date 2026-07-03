@@ -51,11 +51,9 @@ class BrevoReportController extends Controller
         ], $statusCode);
     }
 
-    /**
-     * 2. AUTOMATED CAMPAIGN RECIPIENTS REPORT
-     * URL: https://exhibit_portal.app/brevo-v5/campaign-report/808
-     */
-    public function getEmailsByCampaign($campaignId)
+ 
+//Working
+       public function getEmailsByCampaign($campaignId)
     {
         $apiKey = trim(env('BREVO_API_KEY'));
         $cleanCampaignId = intval(trim($campaignId));
@@ -84,12 +82,15 @@ class BrevoReportController extends Controller
             $campaignData = json_decode($campaignResponse, true);
             $listIds = $campaignData['recipients']['lists'] ?? [];
 
+            // Naitama: 'name' ang tamang key mula sa Brevo API payload para sa pangalan ng campaign
+            $campaignName = $campaignData['name'] ?? 'N/A';
+
             if (empty($listIds)) {
                 return response()->json([
-                    'success' => true,
-                    'campaign_name' => $campaignData['name'] ?? 'N/A',
-                    'message' => 'Walang contact lists na nakakabit sa campaign na ito.',
-                    'emails' => []
+                    'success'       => true,
+                    'campaign_name' => $campaignName,
+                    'message'       => 'Walang contact lists na nakakabit sa campaign na ito.',
+                    'emails'        => []
                 ]);
             }
 
@@ -117,11 +118,11 @@ class BrevoReportController extends Controller
                     $blacklisted = $contact['emailBlacklisted'] ?? false;
                     $allEmails->push([
                         'campaign_id'   => $cleanCampaignId,
-                        'campaign_name' => $campaignData['name'] ?? 'N/A',
+                        'campaign_name' => $campaignName,
                         'from_list_id'  => $cleanListId,
                         'email'         => $contact['email'] ?? 'N/A',
                         'id'            => $contact['id'] ?? 'N/A',
-                        'delivered'     => $blacklisted ? 'No (Bounced/Blocked)' : 'Yes',
+                        'delivered'     => $blacklisted ? 'No' : 'Yes', // Binago sa 'Yes/No' para mag-match sa screenshot niyo
                         'unsubscribed'  => $blacklisted ? 'Yes' : 'No'
                     ]);
                 }
@@ -130,10 +131,41 @@ class BrevoReportController extends Controller
             // Alisin ang mga duplicate rows kung may contact na kasapi sa magkaibang grupo
             $uniqueEmails = $allEmails->unique('email')->values();
 
+            // =========================================================================
+            // BAGONG DAGDAG: DIREKTANG PAG-INSERT AT UPDATE SA DATA BASE TABLE
+            // =========================================================================
+            foreach ($uniqueEmails as $item) {
+                // Tukuyin ang standard status batay sa unsubscribe status
+                $finalStatus = ($item['unsubscribed'] === 'Yes') ? 'unsubscribed' : 'delivered';
+
+                \Illuminate\Support\Facades\DB::table('campaign_recipients')->updateOrInsert(
+                    [
+                        // UNIQUE FIELDS (Dito binebase kung mag-a-update o mag-i-insert ng bago)
+                        'campaign_id' => strval($item['campaign_id']),
+                        'email'       => $item['email']
+                    ],
+                    [
+                        // MAPUPUNAN NA ANG MGA DATI AY NULL FIELDS:
+                        'campaign_name' => $item['campaign_name'],
+                        'from_list_id'  => $item['from_list_id'],
+                        'delivered'     => $item['delivered'],
+                        'unsubscribed'  => $item['unsubscribed'],
+                        
+                        // Iba pang kinakailangang database values
+                        'status'        => $finalStatus,
+                        'action_at'     => now(),
+                        'created_at'    => now(),
+                        'updated_at'    => now()
+                    ]
+                );
+            }
+            // =========================================================================
+
             return response()->json([
                 'success'       => true,
+                'message'       => 'Matagumpay na nakuha, nai-save, at nai-update ang mga records sa database.',
                 'campaign_id'   => $cleanCampaignId,
-                'campaign_name' => $campaignData['name'] ?? 'N/A',
+                'campaign_name' => $campaignName,
                 'total_emails'  => count($uniqueEmails),
                 'emails'        => $uniqueEmails
             ]);
@@ -144,5 +176,6 @@ class BrevoReportController extends Controller
                 'message' => 'Internal Error: ' . $e->getMessage()
             ], 500);
         }
-    }
+    } 
+
 }
