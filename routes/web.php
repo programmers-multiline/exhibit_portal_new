@@ -189,14 +189,6 @@ Route::get('/company/files/{company_id}', [AssignedController::class, 'getCompan
 
 
 
-
-
-
-Route::get('/', function () {
-    return view('welcome');
-});
-
-
 use App\Http\Controllers\BrevoReportController;
 
 Route::get('/brevo-v5/campaigns', [BrevoReportController::class, 'campaigns']);
