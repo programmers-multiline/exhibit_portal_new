@@ -15,37 +15,36 @@ class UserLoginController extends Controller
     {
         return view('auth.external-login');
     }
-   
+
     public function login(Request $request)
     {
         $credentials = $request->only('username', 'password');
-       
-       // dd($credentials);
+
+        // dd($credentials);
 
         if (Auth::attempt($credentials)) {
             $request->session()->regenerate();
 
-           // $user = Auth::user();
+            // $user = Auth::user();
 
-           // dd($user);
- 
+            // dd($user);
+
             return redirect('/AssignedContact');
-            
         }
 
         return back()->withErrors([
             'error' => 'Invalid Credentials'
-            
+
         ]);
     }
 
 
     public function login_via_oms(Request $request)
     {
-      
+
         $user = User::find($request->user_id);
 
-       // dd($user);
+        // dd($user);
 
         if (!$user) {
             abort(403);
@@ -54,15 +53,17 @@ class UserLoginController extends Controller
         Auth::login($user);
 
         $request->session()->regenerate();
-   
+
 
         return redirect()->route('AsssignedContact');
     }
 
 
-    public function logout()
+    public function logout(Request $request)
     {
         Auth::logout();
-        return redirect('/login');
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect()->to('https://www.oms.multi-linegroupofcompanies.com/dashboard');
     }
 }
