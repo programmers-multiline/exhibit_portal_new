@@ -162,7 +162,7 @@ class BrevoReportController extends Controller
     /**
      * Kunin ang lahat ng email contacts mula sa mga listahan ng isang partikular na campaign.
      */
-    public function getEmailsByCampaign($campaignId)
+   /*  public function getEmailsByCampaign($campaignId)
     {
         $apiKey = trim(env('BREVO_API_KEY'));
         $cleanCampaignId = intval(trim($campaignId));
@@ -255,12 +255,12 @@ class BrevoReportController extends Controller
             Log::error("Brevo Get Emails Error: " . $e->getMessage());
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
-    }
+    } */
 
     /**
      * Isang pangkalahatang Helper function para sa cURL GET requests.
      */
-    private function makeRequest($url, $apiKey)
+    /* private function makeRequest($url, $apiKey)
     {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $url);
@@ -279,5 +279,285 @@ class BrevoReportController extends Controller
         }
 
         return ['success' => false, 'status' => $status, 'error' => $response];
+    } */
+
+        public function getEmailsByCampaign($campaignId)
+{
+    $apiKey = trim(env('BREVO_API_KEY'));
+    $cleanCampaignId = intval(trim($campaignId));
+
+    if (empty($apiKey)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'BREVO_API_KEY is not configured in your environment configuration.'
+        ], 500);
     }
+
+    try {
+        $campaignUrl = "{$this->baseUrl}/emailCampaigns/{$cleanCampaignId}";
+        $campaignResponse = $this->makeRequest($campaignUrl, $apiKey);
+
+        if (!$campaignResponse['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $campaignResponse['error']
+            ], $campaignResponse['status'] ?? 502);
+        }
+
+        $campaignData = $campaignResponse['data'];
+        $listIds      = $campaignData['recipients']['lists'] ?? [];
+        $campaignName = $campaignData['name'] ?? 'N/A';
+
+        if (empty($listIds)) {
+            return response()->json([
+                'success'       => true,
+                'campaign_name' => $campaignName,
+                'message'       => 'Walang contact lists na nakakabit sa campaign na ito.',
+                'emails'        => []
+            ]);
+        }
+
+        $allEmails = collect();
+
+        foreach ($listIds as $listId) {
+            $cleanListId     = intval($listId);
+            $limit           = 500;
+            $offset          = 0;
+            $hasMoreContacts = true;
+
+            while ($hasMoreContacts) {
+                $url = "{$this->baseUrl}/contacts/lists/{$cleanListId}/contacts?limit={$limit}&offset={$offset}";
+                $contactsResponse = $this->makeRequest($url, $apiKey);
+
+                if (!$contactsResponse['success']) {
+                    Log::error("Brevo API Error for List ID {$cleanListId}: " . $contactsResponse['error']);
+                    $hasMoreContacts = false;
+                    break;
+                }
+
+                $contacts = $contactsResponse['data']['contacts'] ?? [];
+
+                if (empty($contacts)) {
+                    $hasMoreContacts = false;
+                    break;
+                }
+
+                foreach ($contacts as $contact) {
+                    $email = $contact['email'] ?? null;
+                    
+                    // Laktawan kung walang valid email na nakuha
+                    if (!$email || $email === 'N/A') {
+                        continue;
+                    }
+
+                    $blacklisted = $contact['emailBlacklisted'] ?? false;
+                    $deliveredVal = $blacklisted ? 'No' : 'Yes';
+                    $unsubscribedVal = $blacklisted ? 'Yes' : 'No';
+
+                    // 1. I-save o I-insert sa database (campaign_recipients table)
+                    // Gumamit ng check upang maiwasan ang duplicate entry error sa database
+                    $exists = DB::table('campaign_recipients')
+                        ->where('campaign_id', $cleanCampaignId)
+                        ->where('email', $email)
+                        ->exists();
+
+                    if (!$exists) {
+                        DB::table('campaign_recipients')->insert([
+                            'campaign_id'   => $cleanCampaignId,
+                            'campaign_name' => $campaignName,
+                            'from_list_id'  => $cleanListId,
+                            'delivered'     => $deliveredVal,
+                            'unsubscribed'  => $unsubscribedVal,
+                            'email'         => $email,
+                            'status'        => 'sent', // Default value base sa iyong db schema
+                            'created_at'    => now(),
+                            'updated_at'    => now()
+                        ]);
+                    }
+
+                    // 2. I-push sa koleksyon para sa API return format mo
+                    $allEmails->push([
+                        'campaign_id'   => $cleanCampaignId,
+                        'campaign_name' => $campaignName,
+                        'from_list_id'  => $cleanListId,
+                        'email'         => $email,
+                        'id'            => $contact['id'] ?? 'N/A',
+                        'delivered'     => $deliveredVal,
+                        'unsubscribed'  => $unsubscribedVal
+                    ]);
+                }
+
+                if (count($contacts) < $limit) {
+                    $hasMoreContacts = false;
+                } else {
+                    $offset += $limit;
+                }
+            }
+        }
+
+        $uniqueEmails = $allEmails->unique('email')->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => $uniqueEmails
+        ]);
+
+    } catch (Exception $e) {
+        Log::error("Brevo Get Emails Error: " . $e->getMessage());
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
+
+/**
+ * Isang pangkalahatang Helper function para sa cURL GET requests.
+ */
+private function makeRequest($url, $apiKey)
+{
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'api-key: ' . $apiKey,
+        'accept: application/json'
+    ]);
+
+    $response = curl_exec($ch);
+    $status = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($status >= 200 && $status < 300) {
+        return ['success' => true, 'data' => json_decode($response, true)];
+    }
+
+    return ['success' => false, 'status' => $status, 'error' => $response];
+}
+
+
+/* public function getEmailEngagement($email)
+{
+    $apiKey = trim(env('BREVO_API_KEY'));
+
+    if (empty($apiKey)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'BREVO_API_KEY is not configured.'
+        ], 500);
+    }
+
+    // I-encode ang email sakaling may kakaibang characters
+    $encodedEmail = urlencode(trim($email));
+
+    try {
+        // Brevo API endpoint para sa campaign stats ng isang contact
+        $url = "{$this->baseUrl}/contacts/{$encodedEmail}/campaignStats";
+        $response = $this->makeRequest($url, $apiKey);
+
+        if (!$response['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $response['error']
+            ], $response['status'] ?? 502);
+        }
+
+        // Kunin ang statistics data mula sa response
+        $statsData = $response['data']['campaignStats'] ?? [];
+
+        return response()->json([
+            'success' => true,
+            'email'   => $email,
+            'data'    => $statsData
+        ]);
+
+    } catch (Exception $e) {
+        Log::error("Brevo Engagement Error para sa {$email}: " . $e->getMessage());
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+} */
+public function updateAllEmailsEngagement()
+{
+    $apiKey = trim(env('BREVO_API_KEY'));
+
+    if (empty($apiKey)) {
+        return response()->json([
+            'success' => false,
+            'message' => 'BREVO_API_KEY is not configured.'
+        ], 500);
+    }
+
+    $updatedCount = 0;
+
+    try {
+        // Kunin ang mga email mula sa iyong database table gamit ang chunk (100 kada batch)
+        DB::table('campaign_recipients')
+            ->select('email', 'campaign_id')
+            ->orderBy('id')
+            ->chunk(100, function ($recipients) use ($apiKey, &$updatedCount) {
+                
+                foreach ($recipients as $recipient) {
+                    $email = $recipient->email;
+                    $campaignId = $recipient->campaign_id;
+
+                    if (empty($email) || $email === 'N/A') {
+                        continue;
+                    }
+
+                    // 1. Tawagin ang Brevo API para sa bawat partikular na email
+                    $encodedEmail = urlencode(trim($email));
+                    $url = "{$this->baseUrl}/contacts/{$encodedEmail}/campaignStats";
+                    $response = $this->makeRequest($url, $apiKey);
+
+                    if (!$response['success']) {
+                        Log::warning("Hindi nakuha ang stats para sa {$email}: " . $response['error']);
+                        continue; // Laktawan at ituloy sa susunod na email kung mag-error ang API
+                    }
+
+                    $statsList = $response['data']['campaignStats'] ?? [];
+
+                    // 2. Hanapin ang statistics na tugma sa campaign_id ng email na ito
+                    foreach ($statsList as $stats) {
+                        if (isset($stats['campaignId']) && $stats['campaignId'] == $campaignId) {
+                            
+                            $openedCount = $stats['opened'] ?? 0;
+                            $clicksCount = $stats['clicks'] ?? 0;
+
+                            // Alamin ang status base sa engagement (Maaari mong baguhin ang lohika rito)
+                            $newStatus = 'sent';
+                            if ($clicksCount > 0) {
+                                $newStatus = 'clicked';
+                            } elseif ($openedCount > 0) {
+                                $newStatus = 'opened';
+                            }
+
+                            // 3. I-update ang status at metrics sa iyong local database table
+                            DB::table('campaign_recipients')
+                                ->where('campaign_id', $campaignId)
+                                ->where('email', $email)
+                                ->update([
+                                    'status'     => $newStatus,
+                                    'updated_at' => now(),
+                                    // Tandaan: Kung may 'opened' o 'clicked' columns ka sa table, maaari mo ring i-save dito.
+                                ]);
+
+                            $updatedCount++;
+                            break; // Nahanap na ang tamang campaign, lumabas na sa panloob na loop
+                        }
+                    }
+
+                    // Proteksyon: Mag-pause ng 100 milliseconds (0.1 segundo) sa bawat request
+                    // para hindi ma-block ang iyong API key dahil sa Rate Limiting ng Brevo
+                    usleep(100000); 
+                }
+            });
+
+        return response()->json([
+            'success' => true,
+            'message' => "Matagumpay na natapos ang pag-loop. Na-update ang {$updatedCount} na recipients.",
+        ]);
+
+    } catch (Exception $e) {
+        Log::error("Bulk Engagement Loop Error: " . $e->getMessage());
+        return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
+    }
+}
+
 }
