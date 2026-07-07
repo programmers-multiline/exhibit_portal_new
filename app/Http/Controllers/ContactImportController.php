@@ -23,7 +23,7 @@ use App\Models\ContactsUpdate;
 class ContactImportController extends Controller
 {
 
-    public function ViewContacts(Request $request)
+/*     public function ViewContacts(Request $request)
 {
     $user = Auth::user();    
        
@@ -92,7 +92,90 @@ class ContactImportController extends Controller
 
     $users = ExternalUser::getUsersWithCompanyAndDepartment();
     return view('contacts.viewcontacts', compact('users')); 
+} */
+
+public function ViewContacts(Request $request)
+{
+    $user = Auth::user();    
+       
+    if ($request->ajax()) {
+        // 1. Simulan ang query gamit ang variable ($query) at huwag lagyan ng semicolon o get() sa dulo
+        $query = DB::table('contacts')
+            ->leftJoin('users', 'contacts.entry_by', '=', 'users.emp_id')
+            ->leftJoin('company_list', 'company_list.id', '=', 'contacts.company_id')
+            ->leftJoin('assigned_agent', 'company_list.id', '=', 'assigned_agent.company_id')
+            ->leftJoin('users as ua', 'assigned_agent.psc_emp_id', '=', 'ua.emp_id')
+            ->select([
+                'contacts.id',
+                'contacts.entry_by',
+                'contacts.exhibit_name',
+                'contacts.date',
+                'contacts.time',
+                'contacts.name AS contact_name',   
+                'contacts.company_id',
+                'company_list.company_name',
+                'company_list.address',
+                'contacts.title',
+                'contacts.phone',
+                'contacts.email', 
+                'contacts.remarks', 
+                'users.name AS Entry_by',
+                'assigned_agent.psc_name',
+                'ua.last_name'       
+            ]) 
+            ->where('company_list.company_status', '=', 1); // Nilagyan ng table prefix para iwas ambiguity
+
+        // 2. Date Filtering Logic para sa Contacts
+        if ($request->filled('startDate') && $request->filled('endDate')) {
+            $query->whereBetween('contacts.date', [$request->startDate, $request->endDate]);
+        } elseif ($request->filled('startDate')) {
+            $query->where('contacts.date', '>=', $request->startDate);
+        } elseif ($request->filled('endDate')) {
+            $query->where('contacts.date', '<=', $request->endDate);
+        }  
+
+        // [DAGDAG] 3. PSC Assignment Filter Logic
+        if ($request->filled('pscFilter')) {
+            if ($request->pscFilter === 'unassigned') {
+                // Kapag walang nakatalagang PSC, walang record sa left join table
+                $query->whereNull('assigned_agent.company_id');
+            } elseif ($request->pscFilter === 'assigned') {
+                // Kapag mayroon nang nakatalagang PSC agent
+                $query->whereNotNull('assigned_agent.company_id');
+            }
+        }
+
+        // 4. Position Filter Logic (Makikita lang ng user ang sarili niyang entry kapag HINDI siya position 13 o 237)
+        $query->when(!in_array($user->position_id, [13, 237, 158]), function ($q) use ($user) {
+            return $q->where('contacts.entry_by', $user->emp_id);
+        });
+        
+        // 5. I-pasa ang Query Builder ($query) nang direkta sa DataTables
+        return DataTables::of($query)
+            ->addColumn('checkbox', function($row){
+                if (!empty($row->psc_name)) {
+                    // Inayos ang font-size style na may 'px'
+                    return '<span class="btn btn-sm btn btn-outline-success">'
+                               .$row->last_name.
+                           '</span>';
+                } else if (in_array(auth()->user()->position_id, [13, 237, 158])) {
+                    return '<input type="checkbox" class="participant_checkbox" value="'.$row->company_id.'">';
+                } else {
+                    return '--';
+                }
+            })
+            ->addColumn('action', function($row){
+                return '<i class="fas fa-edit" data-id="'.$row->id.'" style="cursor:pointer; color:red; font-size:14px;" title="Click to Edit"></i>';
+            })
+            ->rawColumns(['checkbox','action']) 
+            ->make(true);
+    }
+
+    $users = ExternalUser::getUsersWithCompanyAndDepartment();
+    return view('contacts.viewcontacts', compact('users')); 
 }
+
+
 
 
 

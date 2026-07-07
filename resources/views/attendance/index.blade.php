@@ -358,6 +358,9 @@ loadAttendance();
     $('#resetFilterBtn').on('click', function() {
         $('#start').val(''); // Burahin ang start date
         $('#end').val('');   // Burahin ang end date
+             // 2. Tanggalin o i-reset ang HTML validation attributes kung mayroon man
+    $('#start').removeAttr('max').removeAttr('min');
+    $('#end').removeAttr('max').removeAttr('min');
         $('#AttendanceTbl').DataTable().draw(); // I-refresh ang DataTables
     });   
     

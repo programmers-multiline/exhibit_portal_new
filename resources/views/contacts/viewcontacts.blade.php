@@ -100,11 +100,21 @@
         <!-- Ilagay ito kahit saan sa iyong blade view -->
             <div id="assignPscWrapper" class="d-none ms-3">
                 @if (in_array(auth()->user()->position_id, [13, 237,158]))
-                    <button type="button" class="btn btn-success d-inline-flex align-items-center justify-content-center px-4 text-white shadow-sm" id="bulkAssignBtn" style="height: 38px;">
+                    <button type="button" class="btn btn-success d-inline-flex align-items-center justify-content-center px-4 text-white shadow-sm" id="bulkAssignBtn" style="height: 38px; width:auto;">
                         <i class="bi bi-person-plus me-2"></i> Assign PSC
                     </button>
                 @endif
             </div>
+
+            <div class="form-group d-none ms-3" id="FilterPscWrapper">
+               <!--  <label for="psc_filter">PSC Assignment:</label> -->
+                <select id="psc_filter" class="form-control">
+                    <option value="">All</option>
+                    <option value="unassigned">No PSC Assigned (Wala Pa)</option>
+                    <option value="assigned">With PSC Assigned</option>
+                </select>
+            </div>
+
 
             <table id="ContactsTbl" class="table table-striped table-hover align-middle nowrap w-100" style="margin-top: 15px !important;">
                 <thead class="table-dark text-uppercase fs-3 tracking-wider">
@@ -230,7 +240,10 @@ startDateInput.addEventListener('change', function() {
 //Use to multiple select participants for assigning of PSC
 $('#bulkAssignBtn').click(function(){
 
-    let selected = [];
+    //let selected = [];
+    let selected = selectedCompanies;
+
+   // alert(selected);
 
     $('.participant_checkbox:checked').each(function(){
         selected.push($(this).val());
@@ -259,7 +272,8 @@ $('#bulkAssignBtn').click(function(){
 
 $('#confirmAssign').click(function(){
 
-    let selected = [];
+    //let selected = [];
+    let selected = selectedCompanies;
 
     // Get selected participants
     $('.participant_checkbox:checked').each(function(){
@@ -359,12 +373,20 @@ $(document).ready(function(){
     $('#resetFilterBtn').on('click', function() {
         $('#start').val(''); // Burahin ang start date
         $('#end').val('');   // Burahin ang end date
+
+        // 2. Tanggalin o i-reset ang HTML validation attributes kung mayroon man
+    $('#start').removeAttr('max').removeAttr('min');
+    $('#end').removeAttr('max').removeAttr('min');
+    selectedCompanies = []; // <-- LINISIN ANG ARRAY NG MGA CHECKBOXES
+
         $('#ContactsTbl').DataTable().draw(); // I-refresh ang DataTables
     });   
    
 
 });//Ending of Document Ready
 
+
+/* var selectedCompanies = [];
 function LoadContacts()
 {
    $('#ContactsTbl').DataTable({
@@ -446,7 +468,154 @@ function LoadContacts()
     }
 });
 
+} */
+
+// 1. Dito itatabi ang lahat ng ID ng mga naka-check na kumpanya
+var selectedCompanies = [];
+
+function LoadContacts()
+{
+   $('#ContactsTbl').DataTable({
+    processing: true,
+    serverSide: true,
+    ajax: {
+        url: "{{ route('contacts.viewcontacts') }}",
+        data: function (d) {
+            d.startDate = $('#start').val();
+            d.endDate   = $('#end').val();
+            d.pscFilter = $('#psc_filter').val();
+        }
+    },
+
+    columns: [
+        { data: 'checkbox', name: 'checkbox', orderable: false, searchable: false}, // Dagdagan ng orderable/searchable false
+        { data: 'exhibit_name', name: 'contacts.exhibit_name' },
+        { 
+            data: 'company_name', 
+            name: 'company_list.company_name',
+            render: function(data, type, row) {
+                return `
+                    <div class="company-info-block">
+                        <div class="company-title" style="color:#01134A; font-weight:bold;">${row.company_name || ''}</div>
+                        <div class="company-address">
+                            <i class="fas fa-map-marker-alt address-icon text-primary"></i> ${row.address || '—'}
+                            <i class="fas fa-edit" data-idcom="${row.id}" style="color:red;cursor:pointer;"></i>
+                        </div>
+                    </div>
+                `;
+            }
+        },
+        { 
+            data: 'contact_name', 
+            name: 'contacts.name',
+            render: function(data, type, row) {
+                return `
+                    <div class="contact-info-block">
+                        <div class="contact-name" style="color:#8F6E03; font-weight:bold;">${row.contact_name || ''}</div>
+                        <div class="contact-item">
+                            <i class="fas fa-envelope contact-icon" style="color:#01454A;"></i> ${row.email || '—'}
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-phone contact-icon" style="color:#402101;"></i> ${row.phone || '—'}
+                            <i class="fas fa-edit" data-idcom="${row.id}" style="color:red;cursor:pointer;"></i>
+                        </div>
+                    </div>
+                `;
+            }
+        },
+        { data: 'remarks', name: 'contacts.remarks' },
+        { data: 'date', name: 'contacts.date' },
+        { data: 'action', name: 'action', orderable: false, searchable: false }
+    ],
+
+    columnDefs: [
+        { targets: 2, className: 'address-wrap' },
+        { targets: 6, className: 'action_col1' }
+    ],
+
+  /*   initComplete: function() {
+        $('.dataTables_length').addClass('d-flex align-items-center');
+        $('#assignPscWrapper').removeClass('d-none').css('margin-left', '20px').appendTo('.dataTables_length');
+        $('#FilterPscWrapper').removeClass('d-none').css('margin-left', '80px').appendTo('.dataTables_length');
+        
+    }, */
+
+initComplete: function() {
+    // 1. Gumawa ng parent row na may flexbox at justify-content-between para itulak ang search sa kanan at filters sa kaliwa
+    var mainRow = $('<div class="d-flex justify-content-between align-items-center flex-wrap mb-2" style="width: 100%;"></div>');
+    
+    // 2. Gumawa ng kaliwang grupo para sa iyong mga filters at dropdowns
+    var leftGroup = $('<div class="d-flex align-items-center flex-wrap"></div>');
+    
+    // 3. Ipasok ang "Show entries" at ang iyong mga custom wrappers sa kaliwang grupo
+    $('.dataTables_length').appendTo(leftGroup).css({'margin-right': '15px', 'margin-bottom': '0px'});
+    
+    if ($('#assignPscWrapper').length) {
+        $('#assignPscWrapper').removeClass('d-none').css({'margin-right': '15px', 'margin-bottom': '0px'}).appendTo(leftGroup);
+    }
+    
+    if ($('#FilterPscWrapper').length) {
+        $('#FilterPscWrapper').removeClass('d-none').css({'margin-right': '15px', 'margin-bottom': '0px'}).appendTo(leftGroup);
+    }
+
+    // 4. Kunin ang orihinal na Search bar at alisin ang mga default margin nito
+    var rightGroup = $('.dataTables_filter');
+    rightGroup.css({'margin-bottom': '0px', 'float': 'none'});
+
+    // 5. I-append ang kaliwang grupo at kanang grupo (Search) sa ating mainRow container
+    leftGroup.appendTo(mainRow);
+    rightGroup.appendTo(mainRow);
+
+    // 6. I-pwesto ang buong mainRow sa pinakataas ng DataTables wrapper
+    mainRow.prependTo('#ContactsTbl_wrapper');
+    
+    // 7. Linisin ang mga natitirang walang lamang rows na iniwan ng default DataTables layout
+    $('#ContactsTbl_wrapper .row:first').remove();
 }
+
+
+,
+
+    // 2. DITO ANG LOGIC PARA PANATILIHING NAKA-CHECK KAPAG NAG-NEXT PAGE
+    drawCallback: function(settings) {
+        $('.participant_checkbox').each(function() {
+            var id = $(this).val();
+            // Kung ang ID ay nasa loob ng array natin, lagyan ito ng checked attribute
+            if (selectedCompanies.indexOf(id) !== -1) {
+                $(this).prop('checked', true);
+            }
+        });
+    }
+   });
+}
+
+// 3. EVENT LISTENER KAPAG NI-CHECK O INALIS ANG CHECK NG USER
+$(document).on('change', '.participant_checkbox', function() {
+    var id = $(this).val();
+
+    if ($(this).is(':checked')) {
+        // Kung ni-check at wala pa sa array, idagdag ito
+        if (selectedCompanies.indexOf(id) === -1) {
+            selectedCompanies.push(id);
+        }
+    } else {
+        // Kung inalisan ng check, tanggalin sa array
+        var index = selectedCompanies.indexOf(id);
+        if (index !== -1) {
+            selectedCompanies.splice(index, 1);
+        }
+    }
+    
+    console.log("Selected IDs across all pages:", selectedCompanies); // Pwede mong tingnan sa console inspect
+});
+
+// Makikinig ito sa tuwing babaguhin ang seleksyon sa dropdown
+$('#psc_filter').on('change', function() {
+    // I-trigger ang muling pag-load at pag-filter ng DataTables gamit ang bagong halaga
+    $('#ContactsTbl').DataTable().draw();
+});
+
+
 
 </script>
 
