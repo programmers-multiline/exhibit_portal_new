@@ -170,8 +170,9 @@ class ReportsController extends Controller
                 'StatusUpdate.description',
                 'StatusUpdate.update_date'
             ])
+            ->distinct()
             ->where('a.psc_emp_id', '=', $psc_emp_id)
-            ->groupBy('c.company_name')
+            
             ->get();
 
 
