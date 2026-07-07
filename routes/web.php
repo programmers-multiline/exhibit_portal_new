@@ -197,17 +197,6 @@ Route::get('/brevo-v5/campaign-report/{id}', [BrevoReportController::class, 'get
 //para mailabas ang statistic ng receiver
 
 
-// Route para sa pagkuha ng report ng campaign
-//Route::get('/brevo/campaign/{campaignId}/report', [BrevoReportController::class, 'getCampaignEngagementReport']);
-
-
-
-
-//Route::get('/brevo/campaign/{campaignId}/display', [BrevoReportController::class, 'showCampaignEngagement']);
-
-
-//Route::get('/test-engagement/{email}', [BrevoReportController::class, 'getEmailEngagement']);
-
 Route::get('/run-bulk-engagement', [BrevoReportController::class, 'updateAllEmailsEngagement']);
 
 
