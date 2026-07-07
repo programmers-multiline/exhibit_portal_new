@@ -57,17 +57,17 @@
             </div>
             <div class="modal-body">
                 <div class="table-responsive shadow-sm rounded border p-2">
-                    <table class="table table-hover align-middle mb-0 w-100" id="leadsDataTable">
-                        <thead class="table-dark text-uppercase tracking-wider" style="font-size: 0.75rem;">
+                    <table class="table table-hover align-middle mb-0 w-100" id="leadsDataTable" style="font-size: 10px;">
+                        <thead class="table-dark text-uppercase tracking-wider" style="font-size: 10px;">
                             <tr>
-                                <th scope="col" class="py-2 px-4 text-start">Company Name</th>
-                                <th scope="col" class="py-2 px-3 text-start">Address</th>
-                                <th scope="col" class="py-2 px-3 text-center">Lead Status</th>
-                                <th scope="col" class="py-2 px-3 text-start">Last Update Description</th>
-                                <th scope="col" class="py-2 px-4 text-end">Update Date</th>
+                                <th scope="col"  style="font-size: 10px;">Company Name</th>
+                                <th scope="col"  style="font-size: 10px;">Address</th>
+                                <th scope="col"  style="font-size: 10px;">Lead Status</th>
+                                <th scope="col"  style="font-size: 10px;">Last Update Description</th>
+                                <th scope="col"  style="font-size: 10px;">Update Date</th>
                             </tr>
                         </thead>
-                        <tbody id="modalTableBody" class="text-secondary fs-6">
+                        <tbody id="modalTableBody" class="text-secondary fs-6" style="font-size: 10px;">
                             <!-- Dito papasok ang in-update na JavaScript code -->
                         </tbody>
                     </table>
@@ -97,7 +97,7 @@ $(document).ready(function() {
         }
 
         // Magpakita ng loading text bago buksan ang modal
-        $('#modalTableBody').html('<tr><td colspan="8" class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Loading details, please wait...</td></tr>');
+        $('#modalTableBody').html('<tr><td colspan="8" style="font-size: 10px;" class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Loading details, please wait...</td></tr>');
         $('#agentDetailsModal').modal('show');
 
         // 2. Patakbuhin ang AJAX Data Render

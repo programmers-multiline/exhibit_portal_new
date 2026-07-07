@@ -51,7 +51,8 @@ class ContactImportController extends Controller
                 'users.name AS Entry_by',
                 'assigned_agent.psc_name',
                 'ua.last_name'       
-            ]);
+            ]) 
+            ->where('company_status', '=', 1); 
 
         // 2. Date Filtering Logic para sa Contacts
         if ($request->filled('startDate') && $request->filled('endDate')) {
@@ -125,7 +126,9 @@ class ContactImportController extends Controller
                         'users.last_name as Entry_by',
                         'assigned_agent.psc_name',
                         'ua.last_name'         
-                    ]); // May semicolon na rito para i-save sa variable
+                    ]) 
+                     ->where('company_status', '=', 1); // May semicolon na rito para i-save sa variable
+                   
 
         // 2. Date Filtering Logic (Ika-kabit sa $query variable)
         if ($request->filled('startDate') && $request->filled('endDate')) {

@@ -165,6 +165,7 @@ class ReportsController extends Controller
             ->select([
                 'a.psc_emp_id',
                 'c.company_name',
+                'c.id',
                 'c.address',
                 'l.lead_status',
                 'StatusUpdate.description',
