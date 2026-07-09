@@ -152,6 +152,49 @@ public function getCompanyFiles($company_id)
 }
 
 
+//removal function
+public function bulkRemovePsc(Request $request)
+{
+    $companyIds = $request->input('company_ids');
+    $currentUser = Auth::user();
+
+    if (empty($companyIds)) {
+        return response()->json(['success' => false, 'message' => 'Walang napiling kumpanya.']);
+    }
+
+       try {
+        DB::transaction(function () use ($companyIds, $currentUser) {
+            foreach ($companyIds as $companyId) {
+                // 1. Kunin muna ang kasalukuyang nakatalagang agent (para sa prev_psc_num)
+                $assignedAgent = DB::table('assigned_agent')
+                    ->where('company_id', $companyId)
+                    ->first();
+
+                if ($assignedAgent) {
+                    // 2. Ipasok ang log sa removed_psc_logs table
+                    DB::table('removed_psc_logs')->insert([
+                        'company_id'     => (int)$companyId,
+                        'prev_psc_num'   => (int)$assignedAgent->psc_emp_id,
+                        'removed_by' => (int)$currentUser->emp_id,
+                        'created_at'     => now(),
+                        'updated_at'     => now()
+                    ]);
+
+                    // 3. Alisin ang record mula sa assigned_agent table
+                    DB::table('assigned_agent')
+                        ->where('company_id', $companyId)
+                        ->delete();
+                }
+            }
+        }); 
+
+        return response()->json(['success' => true, 'message' => 'Matagumpay na naalis at nailog ang mga napiling PSC.']);
+
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => 'Nagkaroon ng problema: ' . $e->getMessage()]);
+    }
+
+}
 
 
 

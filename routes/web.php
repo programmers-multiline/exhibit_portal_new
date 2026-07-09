@@ -169,6 +169,8 @@ Route::get('/Attendance', [ContactImportController::class, 'ViewAttendance'])->n
 Route::post('/Attendance/bulk-assign',[ContactImportController::class, 'bulkAssign']);
 
 Route::get('/AssignedContact', [AssignedController::class, 'index'])->middleware('auth')->name('AsssignedContact');
+Route::post('/psc/bulk-remove', [AssignedController::class, 'bulkRemovePsc'])->name('psc.bulk-remove');
+
 
 Route::get('/viewcontacts', [ContactImportController::class, 'ViewContacts'])->name('contacts.viewcontacts')->middleware('auth');
 

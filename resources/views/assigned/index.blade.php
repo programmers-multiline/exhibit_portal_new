@@ -5,9 +5,13 @@
 <div class="container-fluid mt-4">
 
     <h3 class="mb-3">My Leads</h3>
-     @if (in_array(auth()->user()->position_id, [13, 237]))
+     @if (in_array(auth()->user()->position_id, [13, 237, 158]))
          <button type="button" class="btn btn-success d-inline-flex align-items-center justify-content-center px-4 text-white shadow-sm" id="bulkAssignBtn" style="height: 38px;">
-           <i class="bi bi-person-plus me-2"></i> Assign PSC
+           <i class="fas fa-user-plus"></i> &nbsp; Assign PSC
+         </button>
+
+          <button type="button" class="btn btn-danger d-inline-flex align-items-center justify-content-center px-4 text-white shadow-sm" id="bulkRemoveBtn" style="height: 38px;">
+           <i class="fas fa-user-alt-slash"></i> &nbsp;Remove PSC
          </button>
      @endif
  <!--    <a href="/companies">Table</a> OR <a href="/company_card">Card Format</a>
@@ -39,7 +43,11 @@
                     <small class="text-muted-custom d-block  text-break w-100" style="white-space: normal !important;">
                         <i class="fas fa-map-marker-alt address-icon text-success h6"></i>  
                         {{ $companyData['address'] }} 
-                        <i class="far fa-edit ms-1" style="font-size: 0.7rem;" id="EditAddress"></i>
+                        <i class="far fa-edit ms-1" style="font-size: 0.7rem; cursor:pointer;" id="UpdateAddressModal" 
+                        data-caddress="{{ $companyData['address'] }}"
+                        data-company_name="{{ $companyData['company_name']}}"
+                        data-company_id="{{ $companyData['company_id']}}"
+                        ></i>
                     </small>
 
                     
@@ -60,7 +68,7 @@
                 <div class="form-check m-0 ">
                     <input class="form-check-input border-danger mt-0 participant_checkbox" type="checkbox" id="checkAssign_{{ $loop->index }}" value="{{$companyData['company_id']}}">
                     <label class="form-check-label text-danger fw-medium d-inline-flex align-items-center justify-content-center" style="cursor:pointer;" for="checkAssign_{{ $loop->index }}">
-                        Change PSC
+                        Change/Remove PSC
                     </label>
                 </div>
                 @endif
@@ -364,17 +372,15 @@
       
       <div class="modal-header">
         <h5 class="modal-title">Updating Address Form</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+       <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="background: none; border: none; font-size: 1.5rem; color: #000; cursor: pointer;">
       </div>
 
       <div class="modal-body">
         <input type="hidden" id="company_id">
          <p id="company_name" class="bg bg-success text-white p-2"></p>   
-    
-
         <div class="mb-3">
             <label>Input Addres</label>
-            <textarea class="form-control" id="Address"></textarea>
+            <textarea class="form-control" id="ContactAddress"></textarea>
         </div>
       </div>
 
@@ -388,6 +394,8 @@
   </div>
 </div>
 <!-- Ending of Modal Update Address Modal -->
+
+
 
 
 <!-- Modal to update Contact Person Details Modal -->
@@ -458,6 +466,151 @@
 </style>
 
 <script>
+// Removal of Assigned PSC
+
+/* $('#bulkRemoveBtn').click(function() {
+    // Kunin ang lahat ng checked o napiling company_id
+    var selectedCompanies = [];
+    $('.participant_checkbox:checked').each(function() {
+        selectedCompanies.push($(this).val());
+    });
+
+    if (selectedCompanies.length === 0) {
+        alert('Mangyaring pumili muna ng kumpanya na aalisin.');
+        return;
+    }
+
+    // Gagamit ng prompt sa halip na simpleng confirm box
+    var confirmationInput = prompt('BABALA: Nais mo bang alisin ang PSC sa mga napiling kumpanya?\n\nI-type ang salitang "REMOVE" sa ibaba para kumpirmahin:');
+
+    // Kung pinindot ang Cancel o walang nilagay, hihinto ang script
+    if (confirmationInput === null) {
+        return; 
+    }
+
+    // I-validate kung tugma ang tinype (ginamitan ng .trim() para iwas error sa accidental space)
+    if (confirmationInput.trim() !== 'REMOVE') {
+        alert('Maling confirmation word. Hindi itinuloy ang pag-alis.');
+        return;
+    }
+
+    // Kung tama ang tinype, tutuloy sa AJAX sa ibaba
+    $.ajax({
+        url: "{{ route('psc.bulk-remove') }}",
+        type: "POST",
+        data: {
+            _token: "{{ csrf_token() }}",
+            company_ids: selectedCompanies
+        },
+        success: function(response) {
+            if (response.success) {
+                alert(response.message);
+                location.reload(); 
+            } else {
+                alert('May nagpanggap na error: ' + response.message);
+            }
+        },
+        error: function() {
+            alert('Hindi matapos ang request. Subukan muli.');
+        }
+    });
+}); */
+
+$('#bulkRemoveBtn').click(function() {
+    // Kunin ang lahat ng checked o napiling company_id
+    var selectedCompanies = [];
+    $('.participant_checkbox:checked').each(function() {
+        selectedCompanies.push($(this).val());
+    });
+
+    if (selectedCompanies.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Babala',
+            text: 'Mangyaring pumili muna ng kumpanya na aalisin.',
+            confirmButtonColor: '#3085d6'
+        });
+        return;
+    }
+
+    // SweetAlert Input Prompt para sa "REMOVE" confirmation
+    Swal.fire({
+        title: 'Sigurado ka ba?',
+        text: 'Nais mo bang alisin ang PSC sa mga napiling kumpanya? I-type ang "REMOVE" para kumpirmahin:',
+        icon: 'warning',
+        input: 'text',
+        inputPlaceholder: 'I-type ang REMOVE dito...',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#3085d6',
+        confirmButtonText: 'Alisin',
+        cancelButtonText: 'Kanselahin',
+        inputValidator: (value) => {
+            if (!value) {
+                return 'Kailangan mong mag-input ng confirmation word!';
+            }
+            if (value.trim() !== 'REMOVE') {
+                return 'Maling salita! Dapat ay "REMOVE" sa malalaking titik.';
+            }
+        }
+    }).then((result) => {
+        // Kung tama ang input at pinindot ang 'Alisin' button
+        if (result.isConfirmed) {
+            
+            // Magpakita ng loading spinner habang nag-a-ajax
+            Swal.fire({
+                title: 'Nagpoproseso...',
+                text: 'Mangyaring maghintay habang inaalis ang PSC.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            $.ajax({
+                url: "{{ route('psc.bulk-remove') }}",
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    company_ids: selectedCompanies
+                },
+                success: function(response) {
+                    if (response.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Tagumpay!',
+                            text: response.message,
+                            confirmButtonColor: '#3085d6'
+                        }).then(() => {
+                            location.reload(); // I-reload ang page matapos i-click ang OK
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: response.message,
+                            confirmButtonColor: '#3085d6'
+                        });
+                    }
+                },
+                error: function() {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Oops...',
+                        text: 'Hindi matapos ang request. Subukan muli.',
+                        confirmButtonColor: '#3085d6'
+                    });
+                }
+            });
+        }
+    });
+});
+
+
+
+    
+
+
 
 //Jquery to view files
 $('.view-files-btn').click(function() {
@@ -803,15 +956,20 @@ $(document).on('click','.viewImages', function(){
 //Use to open the Modal and display details about company
 $(document).on('click', '#UpdateAddressModal', function(){
 
-    var c_id         = $(this).data('c_id');
+    var company_id         = $(this).data('company_id');
     var company_name = $(this).data('company_name');
     var status       = $(this).data('status');
+    var caddress     = $(this).data('caddress');
 
-    //alert(company_name)
+console.log(company_id)
 
     $('#company_name').text(company_name);
-     $('#company_id').val(c_id);
+    $('#company_id').val(company_id);
     $('#status').val(status);
+
+     $('#ContactAddress').text(caddress);
+
+    
 
     
     $('#AddressModal').modal('show');
@@ -847,9 +1005,9 @@ $(document).on('click', '#UpdateContact', function(){
 $('#saveAddress').click(function(){
 
     let company_id = $('#company_id').val();
-    let address    = $('#Address').val();
+    let address    = $('#ContactAddress').val();
 
-   console.log(address)
+   console.log(company_id)
 
     $.ajax({
         url: '/companies/update-address',
@@ -860,8 +1018,10 @@ $('#saveAddress').click(function(){
             address   : address
         },
         success: function(response){
-            $('#CompanyTbl').DataTable().ajax.reload(null, false);
+           // $('#CompanyTbl').DataTable().ajax.reload(null, false);
            // alert('Address updated!');
+           location.reload();
+
             Swal.fire({
                 icon             : 'success',
                 title            : 'Saved!',
@@ -876,6 +1036,7 @@ $('#saveAddress').click(function(){
           //  loadCompanies();
           //$('#CompanyTbl').DataTable().ajax.reload();
           loadCompanies();
+          
         }
     });
 
