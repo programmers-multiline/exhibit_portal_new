@@ -134,7 +134,7 @@ class ReportsController extends Controller
 
     return view('reports.agent', compact('agentReports'));
 } */
-public function agentreport()
+/* public function agentreport()
 {
     $user = Auth::user();   
     
@@ -180,7 +180,58 @@ public function agentreport()
         ->get();
 
     return view('reports.agent', compact('agentReports'));
+} */
+
+    public function agentreport()
+{
+    $user = Auth::user();   
+    
+    // Subquery para makuha ang PINAKAHULING update lamang kada kumpanya (iwas double counting)
+    $latestUpdates = DB::table('contacts_update as cu')
+        ->select('cu.company_id', 'cu.status')
+        ->whereIn('cu.id', function($query) {
+            $query->select(DB::raw('MAX(id)'))
+                  ->from('contacts_update')
+                  ->groupBy('company_id');
+        });
+
+    $agentReports = DB::table('assigned_agent as a')
+        // I-join ang subquery sa halip na ang buong table
+        ->leftJoinSub($latestUpdates, 'cu', function ($join) {
+            $join->on('cu.company_id', '=', 'a.company_id');
+        })
+        ->leftJoin('lead_agent_status as l', 'l.id', '=', 'cu.status')
+        ->leftJoin('users as u', 'u.emp_id', '=', 'a.psc_emp_id')
+        ->select(
+            'a.psc_name as agent_name',
+            'a.psc_emp_id as psc_emp_id',
+            DB::raw('COUNT(DISTINCT a.company_id) as total_assigned'),
+            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'New Lead' THEN a.company_id END) as total_new_lead"),
+            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status NOT IN ('New Lead', 'Converted') AND l.lead_status IS NOT NULL THEN a.company_id END) as total_active_leads"),
+            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'Converted' THEN a.company_id END) as total_converted"),
+            DB::raw('COUNT(DISTINCT a.company_id) as total_amount'),
+            
+            // BAGONG CODES: Ito ang nagpapatupad ng hinihingi mong lohika
+            DB::raw('ROUND(
+                SUM(COALESCE(l.status_percentage, 0)) / COUNT(DISTINCT a.company_id), 
+                2
+            ) as average_percentage')
+        )
+        ->whereNotNull('a.psc_name')
+        ->where('a.psc_name', '<>', '')
+        ->when($user->position_id == 157, function ($query) use ($user) {
+            return $query->where('a.psc_emp_id', $user->emp_id);
+        })
+        ->when(in_array($user->position_id, [13, 158]), function ($query) use ($user) {
+            return $query->whereIn('u.group_id', [$user->emp_id]);
+        })
+        ->groupBy('a.psc_name', 'a.psc_emp_id')
+        ->orderBy(DB::raw('COUNT(DISTINCT a.company_id)'), 'desc')
+        ->get();
+
+    return view('reports.agent', compact('agentReports'));
 }
+
 
 
 
