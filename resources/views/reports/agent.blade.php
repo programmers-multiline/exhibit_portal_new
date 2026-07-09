@@ -16,7 +16,7 @@
                 <tr>
                     <th class="text-left pl-3">Agent Name</th>
                     <th>Total Assigned</th>
-                    <th>New Leads</th>
+                    <th>Total Leads Average</th>
                     <th>Active Leads</th>
                     <th>Converted</th>
                     <th class="bg-dark text-white">Total Amount</th>
@@ -34,7 +34,7 @@
                         </a>
                     </td>
 
-                    <td><span class="badge badge-warning text-dark px-3 py-2">{{ number_format($row->total_new_lead) }}</span></td>
+                    <td><span class="badge badge-warning text-dark px-3 py-2">{{ number_format($row->average_percentage, 2) }}%</span></td>
                     <td><span class="badge badge-info px-3 py-2">{{ number_format($row->total_active_leads) }}</span></td>
                     <td><span class="badge badge-success px-3 py-2">{{ number_format($row->total_converted) }}</span></td>
                     <td class="table-dark font-weight-bold">{{ number_format($row->total_amount) }}</td>
