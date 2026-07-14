@@ -15,7 +15,7 @@ class Company extends Model
         'assigned_psc',
         'company_name',
         'company_id',
-        'Address',
+        'address',
         'created_at',
         'updated_at'
     ];

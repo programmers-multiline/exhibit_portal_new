@@ -451,17 +451,17 @@ public function ViewContacts(Request $request)
         return $data;
     }
 
-//Use to Assigned PSC
 public function bulkAssign(Request $request)
 {
     $request->validate([
         'attendee' => 'required|array',
-        'psc_id'       => 'required'
+        'psc_id'   => 'required'
     ]);
 
     DB::beginTransaction();
 
     try {
+
 
         $user = Auth::user();
 
@@ -538,6 +538,136 @@ public function bulkAssign(Request $request)
         ], 500);
     }
 }
+
+
+
+//Use to Assigned PSC
+public function bulkAssignInquiry(Request $request)
+{
+   // dd($request);
+
+    $request->validate([
+        'attendee' => 'required|array',
+        'psc_id'   => 'required'
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        $user = Auth::user();
+
+        // 1. Kunin ang impormasyon ng PSC (Employee)
+        $psc = User::where('emp_id', $request->psc_id)->first();
+
+        if (!$psc) {
+            throw new \Exception('PSC not found');
+        }
+
+        $psc_name = $psc->first_name . ' ' . $psc->last_name;
+
+        // 2. I-loop ang malinis na array ng objects mula sa AJAX
+        foreach ($request->attendee as $attendee) {
+
+            // Kinukuha ang mga detalye na nanggaling mismo sa HTML data-attributes
+            $html_company_name = $attendee['company_name'] ?? null;
+            $html_address      = $attendee['address'] ?? null;
+            $html_client_name  = $attendee['contactname'] ?? null;
+            $html_email        = $attendee['contactemail'] ?? null;
+            $html_phone        = $attendee['contactnumber'] ?? null;
+
+            // Laktawan ang loop kung blangko ang pangalan ng kumpanya para iwas DB crash
+            if (empty($html_company_name)) {
+                continue;
+            }
+
+            // 3. I-insert o i-update muna ang Kumpanya sa company_list table gamit ang Pangalan
+            $companyRecord = Company::updateOrCreate(
+                ['company_name' => $html_company_name], 
+                [
+                    'address'      => $html_address,    
+                    'assigned_psc' => $request->psc_id
+                ]
+            );
+
+            // 4. Kunin ang Auto-Increment ID mula sa bagong insert o umiiral na kumpanya
+            $company_id = $companyRecord->id;
+
+            // 5. I-proseso ang AssignedAgent at Logs gamit ang nakuha nating totoong $company_id
+            $existing = AssignedAgent::where('company_id', $company_id)->first();
+
+            if ($existing) {
+                // ✅ LOG muna bago mag-update
+                AssignedAgentLog::create([
+                    'company_id'      => $company_id, 
+                    'old_psc_emp_id'  => $existing->psc_emp_id,
+                    'old_psc_name'    => $existing->psc_name,
+                    'new_psc_emp_id'  => $request->psc_id,
+                    'new_psc_name'    => $psc_name,
+                    'changed_by'      => $user->emp_id,
+                    'created_at'      => now()
+                ]);
+
+                // ✅ UPDATE ang kasalukuyang psc assignment
+                $existing->update([
+                    'psc_emp_id'  => $request->psc_id,
+                    'psc_name'    => $psc_name,
+                    'assigned_by' => $user->emp_id,
+                    'company_id'  => $company_id,
+                    'updated_at'  => now()
+                ]);
+
+            } else {
+                // ✅ INSERT ng bagong agent assignment record
+                AssignedAgent::create([
+                    'company_id'  => $company_id, 
+                    'psc_emp_id'  => $request->psc_id,
+                    'psc_name'    => $psc_name,
+                    'assigned_by' => $user->emp_id,
+                    'created_at'  => now(),
+                    'updated_at'  => now()
+                ]);
+            }
+
+        // ✅ 6. VALIDATE at UPDATE o INSERT sa Contacts table
+            Contact::updateOrCreate(
+                [
+                    'email'      => $html_email, // Hahanapin kung may umiiral nang katulad na email
+                    'company_id' => $company_id  // At nakakabit sa kumpanyang ito
+                ],
+                [
+                    'entry_by'     => $user->emp_id,          
+                    'exhibit_name' => 'Inquiry',
+                    'date'         => now()->format('Y-m-d'), 
+                    'time'         => now()->format('H:i:s'), 
+                    'name'         => $html_client_name,      
+                    'company'      => $html_company_name,     
+                    'phone'        => $html_phone,            
+                    'updated_at'   => now()
+                ]
+            );
+
+        }
+
+        DB::commit();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'PSC Assigned/Updated and Contact Saved Successfully'
+        ]);
+
+    } catch (\Exception $e) {
+        DB::rollback();
+
+        return response()->json([
+            'success' => false,
+            'message' => $e->getMessage()
+        ], 500);
+    }
+}
+
+
+
+
 
 
 public function UpdateContactDetails(Request $request)

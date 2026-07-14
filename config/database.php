@@ -65,12 +65,23 @@ return [
 
         //Second Database Configuration
          'mysql_second' => [
-        'driver' => 'mysql',
-        'host' => env('DB_HOST_SECOND'),
+        'driver'   => 'mysql',
+        'host'     => env('DB_HOST_SECOND'),
         'database' => env('DB_DATABASE_SECOND'),
         'username' => env('DB_USERNAME_SECOND'),
         'password' => env('DB_PASSWORD_SECOND'),
     ],
+
+'mysql_third' => [
+    'driver'   => 'mysql',
+    'host'     => env('DB_HOST_THIRD'),
+    'database' => env('DB_DATABASE_THIRD'),
+    'username' => env('DB_USERNAME_THIRD'),
+    'password' => env('DB_PASSWORD_SECOND'),
+    // ... panatilihin ang ibang default settings gaya ng charset at collation
+],
+
+
 
         'pgsql' => [
             'driver' => 'pgsql',

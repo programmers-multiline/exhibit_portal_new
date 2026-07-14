@@ -14,15 +14,28 @@
            <i class="fas fa-user-alt-slash"></i> &nbsp;Remove PSC
          </button>
      @endif
- <!--    <a href="/companies">Table</a> OR <a href="/company_card">Card Format</a>
-    <button id="viewAllCompany" class="btn btn-sm mb-2 btn-secondary">View All Company</button>
-    <button class="btn btn-sm btn-success mb-2" id="bulkAssignBtn">Assign Agent</button>
 
-    <input type="text"
-           id="companySearch"
-           class="form-control mb-4"
-           placeholder="Search Company or Contact Person..."> -->
+<!-- For Filter by Exhibit or Source -->
+<form action="{{ route('AsssignedContact')}}" method="GET" class="mb-3">
+    <div class="row align-items-end">
+        <div class="col-md-4">
+            <label for="exhibit_filter" class="form-label">Filter by Source:</label>
+            <select name="exhibit_filter" id="exhibit_filter" class="form-control" onchange="this.form.submit()">
+                <option value="">-- All Source --</option>
+                @foreach($exhibits as $exhibit)
+                    <option value="{{ $exhibit }}" {{ $selectedExhibit == $exhibit ? 'selected' : '' }}>
+                        {{ $exhibit }}
+                    </option>
+                @endforeach
+            </select>
+        </div>
+        <div class="col-md-2">
+            <a href="{{ route('AsssignedContact') }}" class="btn btn-secondary">Reset</a>
+        </div>
+    </div>
+</form>
 
+<!-- Ending of Filter -->
     <div id="summary" class="mb-3 text-muted"></div>
 
     <!-- Start of Card -->
@@ -32,15 +45,26 @@
     @foreach($companies as $companyData)
         <!-- 2. MAIN CARD: Tinanggal ang panggulong 'col' classes para hindi mag-clash ang width -->
         <div class="main-container bg-white shadow-sm p-2 border rounded d-flex flex-column" style="width: 330px; height: auto; font-size: 0.75rem !important; flex-shrink: 0;">
+                    
+                    
+                    <div class="company-source {{ $companyData['exhibit_name']=='PhilConstruct' ? 'source-blue' : 'source-pink' }}">
+                        <span> 
+                            <label class="font-weight-bold">Source:</label> 
+                            {{ $companyData['exhibit_name'] }} 
+                        </span>  
+                      </div>
 
+                     <!--Ending of Div Source  -->
             <!-- 1. HEADER SECTION (Fixed Height) -->
-            <div class="company-header-card header-bg p-3 rounded-top d-flex justify-content-between align-items-center mb-2" style="height: auto;">
+            <div class="company-header-card {{ $companyData['exhibit_name'] == 'Inquiry' ? 'header-inquiry' : 'header-philconstruct' }}
+    p-3 rounded-top d-flex justify-content-between align-items-center mb-2" style="height: auto;">
+                   
                 <div class="text-break w-100" >
                     <h6 class="fw-bold m-0 text-uppercase tracking-wide" style="color:whitesmoke;font-size: 0.90rem;" title="{{ $companyData['company_name'] }}">
                         {{ $companyData['company_name'] }}
                     </h6>
                   
-                    <small class="text-muted-custom d-block  text-break w-100" style="white-space: normal !important;">
+                    <small class="text-white d-block  text-break w-100" style="white-space: normal !important;">
                         <i class="fas fa-map-marker-alt address-icon text-success h6"></i>  
                         {{ $companyData['address'] }} 
                         <i class="far fa-edit ms-1" style="font-size: 0.7rem; cursor:pointer;" id="UpdateAddressModal" 
@@ -50,13 +74,18 @@
                         ></i>
                     </small>
 
+                 
+
                     
                 </div>
-                <i class="fas fa-building fs-4 text-muted-custom flex-shrink-0 h3 text-white"></i>
+               <!--  <i class="fas fa-building fs-4 text-muted-custom flex-shrink-0 h3 text-white"></i> -->
+                        <div class="company-icon">
+                        <i class="fas fa-building"></i>
+                        </div>
             </div>
 
             <!-- 2. LEAD PIPELINE SECTION (Fixed Height) -->
-            <div class="border p-2 rounded mb-2" style="height: 70px;">
+            <div class="section-card">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                     <span class="fw-semibold">Lead Pipeline</span> 
                     <span class="text-muted" style="font-size: 0.7rem;">[ {{ $companyData['status_percentage'] }} ]</span>
@@ -85,9 +114,9 @@
                 <div class="contact-scroll-box bg-light flex-grow-1" style="height: 170px; overflow-y: auto;">
                     @if(count($companyData['contacts']) > 0)
                         @foreach($companyData['contacts'] as $index => $contact)
-                            <div class="bg-white p-2 rounded border mb-2 position-relative shadow-sm">
+                            <div class="contact-card">
                                 <span class="text-muted d-block mb-1" style="font-size: 0.65rem;">Contact Person {{ $index + 1 }}</span>
-                                <span class="font-weight-bold d-block fst-italic mb-1 text-truncate" style="font-size: 0.8rem;">{{ $contact['name'] }}</span>
+                                <span class="font-weight-bold d-block fst-italic mb-1 text-truncate contact-name" >{{ $contact['name'] }}</span>
                                 
                                 <div class="text-secondary lh-sm text-truncate" style="font-size: 0.7rem;">
                                     <div class="mb-1 text-truncate"><i class="fas fa-phone-alt text-danger me-1"></i> {{ $contact['phone'] }}</div>
@@ -129,8 +158,17 @@
                 </div>
 
                 <div class="d-flex align-items-center mb-2 border  border-secondary p-2">
-                    <div class=" bg-secondary rounded-circle d-flex align-items-center justify-content-center text-white me-2 shadow-sm flex-shrink-0" style="width: 30px; height: 28px;">
-                        <i class="fas fa-user style-sm"></i>
+                                        @php
+                        $nameParts = explode(' ', trim($companyData['AgentName']));
+                        $initials = strtoupper(substr($nameParts[0],0,1));
+
+                        if(count($nameParts) > 1){
+                            $initials .= strtoupper(substr(end($nameParts),0,1));
+                        }
+                    @endphp
+
+                    <div class="agent-avatar">
+                        {{ $initials }}
                     </div>
                     <div class=" text-truncate">
                         <span class="font-weight-bold d-block m-0 text-uppercase text-truncate" style="font-size: 0.75rem;">
@@ -184,11 +222,8 @@
         </div> <!-- WAKAS NG MAIN CONTAINER -->
     @endforeach
 
-</div> <!-- WAKAS NG PARENT WRAPPER -->
-
-
-
-
+</div>
+ <!-- WAKAS NG PARENT WRAPPER -->
 
 <!-- Ending of Card -->
 
@@ -1096,119 +1131,300 @@ $(document).on('click', '.btnUpdateStatus', function(){
 </script>
 
 <style>
+
+.progress{
+
+height:8px;
+
+border-radius:20px;
+
+background:#edf2f7;
+
+}
+
+.progress-bar{
+
+border-radius:20px;
+
+transition:width .8s;
+
+background:linear-gradient(90deg,#22c55e,#10b981);
+
+}
+
+.section-card{
+
+background:#fff;
+
+padding:14px;
+
+border-radius:12px;
+
+margin-bottom:14px;
+
+box-shadow:0 3px 10px rgba(0,0,0,.05);
+
+}
+
+.company-icon{
+
+width:52px;
+
+height:52px;
+
+border-radius:50%;
+
+background:rgba(255,255,255,.15);
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+color:#fff;
+
+font-size:22px;
+
+}
+
+
+
 /* for LatestUpdate */
 /* CSS Styling */
-.company-header-card {
-    /* Ang iyong orihinal na blue-purple gradient base */
-    background: linear-gradient(90deg, #10063c 0%, #1e1f71 50%, #3a3b97 100%);
-    color:#fef1cf;
-    
-    /* Banayad na box shadow para magmukhang lumulutang ang header */
-    box-shadow: 0 4px 15px rgba(102, 16, 242, 0.15);
-    
-    /* Siguraduhing pantay ang transition kapag may hover effects */
-    transition: all 0.3s ease;
+/* .company-header-card{
+
+background:linear-gradient(135deg,#2b2d87,#312e81);
+
+padding:18px;
+
+min-height:105px;
+
+} */
+
+.company-header-card h6{
+
+font-size:17px;
+
+font-weight:700;
+
+letter-spacing:.3px;
+
+line-height:1.4;
+
+margin-bottom:8px;
+
+}
+
+.company-header-card small{
+
+font-size:12px;
+
+opacity:.9;
+
+line-height:1.5;
+
+}
+
+.company-source{
+
+padding:8px 15px;
+
+font-size:.72rem;
+
+font-weight:600;
+
+color:#fff;
+
+letter-spacing:.5px;
+
+}
+
+.source-blue{
+
+background:linear-gradient(135deg,#1d4ed8,#06b6d4);
+
+}
+
+.source-pink{
+
+background:linear-gradient(135deg,#f97316,#ec4899);
+
+}
+
+.contact-card{
+
+padding:12px;
+
+border-radius:12px;
+
+background:#fff;
+
+margin-bottom:10px;
+
+transition:.2s;
+
+border:1px solid #edf2f7;
+
+}
+
+.contact-card:hover{
+
+background:#f8fafc;
+
+transform:translateX(3px);
+
 }
 
 
-.MainlatestUpdate {
-  border: 1px solid #e0dbcd; /* Manipis na border sa gilid */
-  border-radius: 6px;        /* Swabeng kurba sa mga kanto */
-  overflow: hidden;          /* Para hindi lumampas ang kulay sa kurba */
-  font-family: sans-serif;
-  max-width: 500px;    
-      /* Pwede mong baguhin ang laki nito */
+.contact-name{
+
+font-size:15px;
+
+font-weight:700;
+
+font-style:normal;
+
+color:#1e293b;
+
 }
 
-.latestUpdateHeader {
-   /* Eksaktong kulay-cream/dilaw sa header */
-  color: #faf9f8;            /* Madilim na kulay para sa text */
-  font-size: 12px;
-  font-weight: bold;
-  padding: 10px 15px;
-  border-bottom: 1px solid #e0dbcd; /* Linya sa ilalim ng header */
+.btn{
+
+border-radius:10px;
+
+font-weight:600;
+
 }
 
-.latestUpdateBody {
-  background-color: #ffffff; /* Puti ang loob */
-  color: #000000;
-  padding: 20px;
-  text-align: left; 
-  
+.btn-outline-success:hover{
+
+background:#22c55e;
+
+color:white;
+
 }
 
+.btn-outline-dark:hover{
 
+background:#1e293b;
 
-#CapitaLized{text-transform: capitalize; font-weight: bold;}
-    
-/* For Card Design View */
-.company-header-card {
-    /* Ang iyong orihinal na blue-purple gradient base */
-    background: linear-gradient(90deg, #10063c 0%, #1e1f71 50%, #3a3b97 100%);
-    
-    /* Banayad na box shadow para magmukhang lumulutang ang header */
-    box-shadow: 0 4px 15px rgba(102, 16, 242, 0.15);
-    
-    /* Siguraduhing pantay ang transition kapag may hover effects */
-    transition: all 0.3s ease;
+color:white;
+
 }
 
-/* Hover effect para sa Edit Icon sa loob ng address */
-.company-header-card .fa-edit {
-    transition: color 0.2s ease-in-out, transform 0.2s ease;
+.agent-section{
+
+border:none;
+
+border-radius:14px;
+
+box-shadow:0 4px 12px rgba(0,0,0,.05);
+
+overflow:hidden;
+
+}
+.agent-section .border{
+
+background:#fff7d6;
+
+border:none!important;
+
+padding:14px;
+
+}
+.agent-avatar{
+
+width:40px;
+
+height:40px;
+
+border-radius:50%;
+
+background:#2563eb;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+color:white;
+
+font-size:18px;
+
 }
 
-.company-header-card .fa-edit:hover {
-    color: #ffffff !important; /* Nagiging purong puti kapag itinapat ang mouse */
-    transform: scale(1.15); /* Lalaki nang kaunti para madaling mapansin */
+.badge{
+
+padding:7px 12px;
+
+font-size:11px;
+
+border-radius:20px;
+
 }
 
+.view-files-btn{
 
+border-radius:8px;
 
+padding:6px 14px;
 
-.add_contact, .btnUpdateStatus {
-  transition: all 0.2s ease-in-out; /* Para smooth ang pagbago */
+font-weight:600;
+
 }
 
-/* Effect kapag itinapat ang mouse (Hover) */
-.add_contact:hover {
-  color: #ffc107; /* Papalitan ang kulay (hal. Yellow/Gold) */
-  transform: scale(1.2); /* Lalaki ng kaunti ang icon */
-  opacity: 0.8; /* Magiging medyo transparent */
+.contact-scroll-box::-webkit-scrollbar{
+
+width:6px;
+
 }
 
-.btnUpdateStatus:hover {
-  color: #ffc107; /* Papalitan ang kulay (hal. Yellow/Gold) */
-  transform: scale(1.2); /* Lalaki ng kaunti ang icon */
-  opacity: 0.8; /* Magiging medyo transparent */
+.contact-scroll-box::-webkit-scrollbar-thumb{
+
+background:#cbd5e1;
+
+border-radius:20px;
+
 }
 
+.contact-scroll-box::-webkit-scrollbar-track{
 
+background:transparent;
 
-
-    .card:hover{
-    transform: translateY(-3px);
-    transition: .2s ease;
 }
 
-.participant-img:hover{
-    transform: scale(1.05);
-    transition: .2s ease;
+/* ==========================
+   RESPONSIVE CARD
+========================== */
+
+.card-company{
+    width:340px;
 }
 
-.crm-card{
-    transition: all .25s ease;
+@media (max-width:1200px){
+    .card-company{
+        width:48%;
+    }
 }
 
-.crm-card:hover{
-    transform: translateY(-6px);
-    box-shadow: 0 1rem 2rem rgba(0,0,0,.15)!important;
+@media (max-width:768px){
+    .card-company{
+        width:100%;
+    }
 }
 
-.participant-img:hover{
-    transform: scale(1.08);
-    transition: .2s ease;
+.header-philconstruct{
+    background: linear-gradient(135deg, #2b2d87, #312e81);
 }
+
+.header-inquiry{
+    background: linear-gradient(135deg, #ec4899, #db2777);
+}
+/* Ending of NEw CSS */
+
+
     </style>
 
 @endsection

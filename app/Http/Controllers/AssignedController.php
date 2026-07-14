@@ -35,10 +35,17 @@ class AssignedController extends Controller
 
        public function index(Request $request)
         {
-              $user       = Auth::user();
+$user       = Auth::user();
 
-             // dd($user->position_id);
-            $group_id   = $user->group_id;
+// 1. Kunin ang lahat ng unique na exhibit_name para sa dropdown
+    $exhibits = DB::table('contacts')
+        ->whereNotNull('exhibit_name')
+        ->where('exhibit_name', '<>', '')
+        ->distinct()
+        ->pluck('exhibit_name');
+
+    // 2. Kunin ang piniling filter mula sa request ($request->exhibit_filter)
+    $selectedExhibit = $request->input('exhibit_filter');
 
 $rawResults = DB::table('company_list as cm') // 1. Main table is already cm
     ->select([
@@ -48,6 +55,7 @@ $rawResults = DB::table('company_list as cm') // 1. Main table is already cm
         'cm.assigned_psc',
         'c.id as Contactid',
         'c.entry_by',
+        'c.exhibit_name',
         'c.name as ContactPerson',
         'c.phone as ContactPhone',
         'c.email as ContactEmail',
@@ -72,6 +80,9 @@ $rawResults = DB::table('company_list as cm') // 1. Main table is already cm
         $query->whereNotNull('a.psc_name')
               ->where('a.psc_name', '<>', '');
     })
+    ->when($selectedExhibit, function ($query, $selectedExhibit) {
+            return $query->where('c.exhibit_name', $selectedExhibit);
+        })
     // KONDISYON 1: Kung ang position_id ay 157
     ->when($user->position_id == 157, function ($query) use ($user) {
         return $query->where('cm.assigned_psc', $user->emp_id);
@@ -94,6 +105,7 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
     //dd($first->UpdateRemarks);
     return [
         'company_id'        => $first->company_id,
+        'exhibit_name'      => $first->exhibit_name,
         'company_name'      => $first->company_name,
         'address'           => $first->address ?? 'No Address',
         'AgentName'         => $first->AgentName ?? 'No Agent Assigned',
@@ -104,8 +116,6 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
         'UpdateRemarks'     => $last->UpdateRemarks ?? 'No Remarks Available',
         'UpdateTime'        => $last->UpdateTime ?? '--',
         'file_path'         => $last->file_path ?? 'No File',
-        
-
         'contacts'          => $rows->map(function($row) {
             return [
                 'id'    => $row->Contactid,
@@ -128,7 +138,8 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
     ]);
 }
 
-return view('assigned.index', compact('companies','lead_agent_status','user_group','user','contact_files'));
+return view('assigned.index', compact('companies','lead_agent_status','user_group','user','contact_files','exhibits', 'selectedExhibit'));
+ 
    
        // return view('assigned.index');
     
@@ -173,11 +184,11 @@ public function bulkRemovePsc(Request $request)
                 if ($assignedAgent) {
                     // 2. Ipasok ang log sa removed_psc_logs table
                     DB::table('removed_psc_logs')->insert([
-                        'company_id'     => (int)$companyId,
-                        'prev_psc_num'   => (int)$assignedAgent->psc_emp_id,
-                        'removed_by' => (int)$currentUser->emp_id,
-                        'created_at'     => now(),
-                        'updated_at'     => now()
+                        'company_id'   => (int)$companyId,
+                        'prev_psc_num' => (int)$assignedAgent->psc_emp_id,
+                        'removed_by'   => (int)$currentUser->emp_id,
+                        'created_at'   => now(),
+                        'updated_at'   => now()
                     ]);
 
                     // 3. Alisin ang record mula sa assigned_agent table

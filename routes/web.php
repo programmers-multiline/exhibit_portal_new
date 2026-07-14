@@ -197,9 +197,14 @@ Route::get('/brevo-v5/campaigns', [BrevoReportController::class, 'campaigns']);
 Route::get('/brevo-v5/campaign-report/{id}', [BrevoReportController::class, 'getEmailsByCampaign']);
 
 //para mailabas ang statistic ng receiver
-
-
 Route::get('/run-bulk-engagement', [BrevoReportController::class, 'updateAllEmailsEngagement']);
+
+
+use App\Http\Controllers\InquiryController;
+// Use to display inquiries
+Route::get('/inquiries', [InquiryController::class, 'index'])->name('inquiries.index');
+Route::post('/inquiry/bulk-assign',[ContactImportController::class, 'bulkAssignInquiry']);
+
 
 
 
