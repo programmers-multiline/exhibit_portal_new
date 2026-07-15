@@ -3,6 +3,8 @@
 @section('content')
 
 <div class="container-fluid mt-4">
+    <!-- Palitan ang panimulang tag ng ginawa nating sticky container nito: -->
+<div class="sticky-top bg-white pt-2 pb-3" style="top: 70px; z-index: 1020; box-shadow: 0 4px 6px -6px #222; border-radius:5px; padding:8px;">
 
     <h3 class="mb-3">My Leads</h3>
      @if (in_array(auth()->user()->position_id, [13, 237, 158]))
@@ -34,6 +36,8 @@
         </div>
     </div>
 </form>
+    </div>
+    <!-- Ending of sticky-top -->
 
 <!-- Ending of Filter -->
     <div id="summary" class="mb-3 text-muted"></div>

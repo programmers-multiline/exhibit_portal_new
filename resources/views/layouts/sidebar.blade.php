@@ -40,25 +40,23 @@
 					</li> -->
 					<li class="{{ request()->is('import') || request()->is('import/*') ? 'active' : '' }}">
 						<a href="{{ url('import') }}" class="dropdown-toggle no-arrow">
-							<!-- <span class="micon dw dw-invoice"></span> -->
 							<i class=" micon fas fa-upload"></i>
 							<span class="mtext">import</span>
 						</a>
 					</li>
 
 					@if(auth()->user() && (auth()->user()->position_id == 13 || auth()->user()->position_id == 158))
-					<li class="{{ request()->is('Attendance') || request()->is('Attendance/*') ? 'active' : '' }}">
+					<!-- <li class="{{ request()->is('Attendance') || request()->is('Attendance/*') ? 'active' : '' }}">
 						<a href="{{ url('Attendance') }}" class="dropdown-toggle no-arrow">
-							<!-- <span class="micon dw dw-invoice"></span> -->
 							<i class="micon fas fa-list-alt"></i>
 							<span class="mtext">Attendance</span>
 						</a>
-					</li>
+					</li> -->
 
 					
 					<li class="{{ request()->is('viewcontacts') || request()->is('viewcontacts/*') ? 'active' : '' }}">
 						<a href="{{ url('viewcontacts') }}" class="dropdown-toggle no-arrow">
-							<!-- <span class="micon dw dw-invoice"></span> -->
+					
 							<i class="micon fas fa-address-book"></i>
 							<span class="mtext">Contacts</span>
 						</a>
@@ -80,9 +78,9 @@
 						<li class="{{ request()->is('/reports/agent-performance') ? 'active' : '' }}">
 							<a href="/reports/agent-performance">Agent Report</a>
 						</li>
-						<li class="{{ request()->is('color-settings') ? 'active' : '' }}">
+						<!-- <li class="{{ request()->is('color-settings') ? 'active' : '' }}">
 							<a href="color-settings.html">Summary Report Per Agent</a>
-						</li>
+						</li> -->
 					</ul>
 					</li>
 				<!-- 	<li>
