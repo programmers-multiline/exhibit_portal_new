@@ -41,7 +41,7 @@
 					<li class="{{ request()->is('import') || request()->is('import/*') ? 'active' : '' }}">
 						<a href="{{ url('import') }}" class="dropdown-toggle no-arrow">
 							<i class=" micon fas fa-upload"></i>
-							<span class="mtext">imports</span>
+							<span class="mtext">import {{auth()->user()->position_id}}</span>
 						</a>
 					</li>
 
