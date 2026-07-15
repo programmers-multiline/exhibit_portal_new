@@ -38,12 +38,12 @@
 							<span class="mtext">Client List</span>
 						</a>
 					</li> -->
-					<li class="{{ request()->is('import') || request()->is('import/*') ? 'active' : '' }}">
+					<!-- <li class="{{ request()->is('import') || request()->is('import/*') ? 'active' : '' }}">
 						<a href="{{ url('import') }}" class="dropdown-toggle no-arrow">
 							<i class=" micon fas fa-upload"></i>
 							<span class="mtext">import {{auth()->user()->position_id}}</span>
 						</a>
-					</li>
+					</li> -->
 
 					@if(auth()->user() && (auth()->user()->position_id == 13 || auth()->user()->position_id == 158))
 					<!-- <li class="{{ request()->is('Attendance') || request()->is('Attendance/*') ? 'active' : '' }}">
