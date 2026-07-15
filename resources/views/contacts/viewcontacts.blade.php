@@ -170,7 +170,8 @@
 <!-- Ending of Carousel Modal -->
 
 <!-- MOdal for Assigning of PSC -->
- <div class="modal fade" id="assignModal">
+
+<div class="modal fade" id="assignModal">
 <div class="modal-dialog">
 <div class="modal-content">
 

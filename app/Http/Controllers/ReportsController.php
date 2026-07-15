@@ -84,150 +84,87 @@ class ReportsController extends Controller
        return view('reports.index', compact('reports', 'reports_per_WorldBex', 'reports_per_PhilConstruct','reports_per_PHA' ));
     }
 
-
-//Agent Report
-/*    public function agentreport()
+public function getCompanyHistory(Request $request)
 {
-    $user = Auth::user();   
-    
-    // Subquery para makuha ang PINAKAHULING update lamang kada kumpanya (iwas double counting)
-    $latestUpdates = DB::table('contacts_update as cu')
-        ->select('cu.company_id', 'cu.status')
-        ->whereIn('cu.id', function($query) {
-            $query->select(DB::raw('MAX(id)'))
-                  ->from('contacts_update')
-                  ->groupBy('company_id');
-        });
+    $companyId = $request->company_id;
 
-    $agentReports = DB::table('assigned_agent as a')
-        // I-join ang subquery sa halip na ang buong table
-        ->leftJoinSub($latestUpdates, 'cu', function ($join) {
-            $join->on('cu.company_id', '=', 'a.company_id');
-        })
-        ->leftJoin('lead_agent_status as l', 'l.id', '=', 'cu.status')
-        ->leftJoin('users as u', 'u.emp_id', '=', 'a.psc_emp_id')
+    $history = DB::table('contacts_update as c')
+        ->leftJoin('company_list as cl', 'cl.id', '=', 'c.company_id')
+        ->leftJoin('lead_agent_status as l', 'l.id', '=', 'c.status')
+        ->leftJoin('users as u', 'u.emp_id', '=', 'c.updated_by') // Bagong join para sa pangalan ng user
         ->select(
-            'a.psc_name as agent_name',
-            'a.psc_emp_id as psc_emp_id',
-            DB::raw('COUNT(DISTINCT a.company_id) as total_assigned'),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'New Lead' THEN a.company_id END) as total_new_lead"),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status NOT IN ('New Lead', 'Converted') AND l.lead_status IS NOT NULL THEN a.company_id END) as total_active_leads"),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'Converted' THEN a.company_id END) as total_converted"),
-            DB::raw('COUNT(DISTINCT a.company_id) as total_amount') 
+            'cl.company_name',
+            'c.company_id',
+            'c.status',
+            'l.lead_status',
+            'c.description',
+            'c.updated_by',
+            'u.name as user_name', // Binigyan ng alias para hindi magkapalit sa company_name
+            'c.update_date'
         )
-        ->whereNotNull('a.psc_name')
-        ->where('a.psc_name', '<>', '')
-        // Tiyakin kung emp_id o group_id dapat ang ikukumpara rito:
-       // ->where('u.group_id', '=', $user->emp_id) 
-           // KONDISYON 1: Kung ang position_id ay 157
-        ->when($user->position_id == 157, function ($query) use ($user) {
-                return $query->where('a.psc_emp_id', $user->emp_id);
-            })
-            // KONDISYON 2: Kung ang position_id ay 13
-        ->when(in_array($user->position_id, [13, 158]), function ($query) use ($user) {
-            return $query->whereIn('u.group_id', [$user->emp_id]);
-        })
-        ->groupBy('a.psc_name', 'a.psc_emp_id')
-        // Gumamit ng DB::raw sa orderBy para sa mga computed fields sa MySQL strict mode
-        ->orderBy(DB::raw('COUNT(DISTINCT a.company_id)'), 'desc')
+        ->where('c.company_id', $companyId)
+        ->orderBy('c.update_date', 'desc') // Pinakabagong update ang nasa itaas
         ->get();
 
-    return view('reports.agent', compact('agentReports'));
-} */
-/* public function agentreport()
-{
-    $user = Auth::user();   
-    
-    // Subquery para makuha ang PINAKAHULING update lamang kada kumpanya (iwas double counting)
-    $latestUpdates = DB::table('contacts_update as cu')
-        ->select('cu.company_id', 'cu.status')
-        ->whereIn('cu.id', function($query) {
-            $query->select(DB::raw('MAX(id)'))
-                  ->from('contacts_update')
-                  ->groupBy('company_id');
-        });
+    return response()->json($history);
+}
 
-    $agentReports = DB::table('assigned_agent as a')
-        // I-join ang subquery sa halip na ang buong table
-        ->leftJoinSub($latestUpdates, 'cu', function ($join) {
-            $join->on('cu.company_id', '=', 'a.company_id');
-        })
-        ->leftJoin('lead_agent_status as l', 'l.id', '=', 'cu.status')
-        ->leftJoin('users as u', 'u.emp_id', '=', 'a.psc_emp_id')
-        ->select(
-            'a.psc_name as agent_name',
-            'a.psc_emp_id as psc_emp_id',
-            DB::raw('COUNT(DISTINCT a.company_id) as total_assigned'),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'New Lead' THEN a.company_id END) as total_new_lead"),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status NOT IN ('New Lead', 'Converted') AND l.lead_status IS NOT NULL THEN a.company_id END) as total_active_leads"),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'Converted' THEN a.company_id END) as total_converted"),
-            DB::raw('COUNT(DISTINCT a.company_id) as total_amount'),
-            // BAGONG COLUMN: Kinukuha ang average percentage ng mga kumpanyang hawak ng agent na may 2 decimal places
-            DB::raw('ROUND(AVG(l.status_percentage), 2) as average_percentage') 
-        )
-        ->whereNotNull('a.psc_name')
-        ->where('a.psc_name', '<>', '')
-        // Kondisyon base sa position_id ng user
-        ->when($user->position_id == 157, function ($query) use ($user) {
-            return $query->where('a.psc_emp_id', $user->emp_id);
-        })
-        ->when(in_array($user->position_id, [13, 158]), function ($query) use ($user) {
-            return $query->whereIn('u.group_id', [$user->emp_id]);
-        })
-        ->groupBy('a.psc_name', 'a.psc_emp_id')
-        // Gumamit ng DB::raw sa orderBy para sa mga computed fields sa MySQL strict mode
-        ->orderBy(DB::raw('COUNT(DISTINCT a.company_id)'), 'desc')
-        ->get();
-
-    return view('reports.agent', compact('agentReports'));
-} */
 
     public function agentreport()
 {
     $user = Auth::user();   
     
-    // Subquery para makuha ang PINAKAHULING update lamang kada kumpanya (iwas double counting)
-    $latestUpdates = DB::table('contacts_update as cu')
-        ->select('cu.company_id', 'cu.status')
-        ->whereIn('cu.id', function($query) {
-            $query->select(DB::raw('MAX(id)'))
-                  ->from('contacts_update')
-                  ->groupBy('company_id');
-        });
+// 1. Subquery para makuha ang PINAKAHULING update lamang kada kumpanya
+$latestUpdates = DB::table('contacts_update as cu')
+    ->select('cu.company_id', 'cu.status')
+    ->whereIn('cu.id', function($query) {
+        $query->select(DB::raw('MAX(id)'))
+              ->from('contacts_update')
+              ->groupBy('company_id');
+    });
 
-    $agentReports = DB::table('assigned_agent as a')
-        // I-join ang subquery sa halip na ang buong table
-        ->leftJoinSub($latestUpdates, 'cu', function ($join) {
-            $join->on('cu.company_id', '=', 'a.company_id');
-        })
-        ->leftJoin('lead_agent_status as l', 'l.id', '=', 'cu.status')
-        ->leftJoin('users as u', 'u.emp_id', '=', 'a.psc_emp_id')
-        ->select(
-            'a.psc_name as agent_name',
-            'a.psc_emp_id as psc_emp_id',
-            DB::raw('COUNT(DISTINCT a.company_id) as total_assigned'),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'New Lead' THEN a.company_id END) as total_new_lead"),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status NOT IN ('New Lead', 'Converted') AND l.lead_status IS NOT NULL THEN a.company_id END) as total_active_leads"),
-            DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'Converted' THEN a.company_id END) as total_converted"),
-            DB::raw('COUNT(DISTINCT a.company_id) as total_amount'),
-            
-            // BAGONG CODES: Ito ang nagpapatupad ng hinihingi mong lohika
-            DB::raw('ROUND(
-                SUM(COALESCE(l.status_percentage, 0)) / COUNT(DISTINCT a.company_id), 
-                2
-            ) as average_percentage')
-        )
-        ->whereNotNull('a.psc_name')
-        ->where('a.psc_name', '<>', '')
-        ->when($user->position_id == 157, function ($query) use ($user) {
-            return $query->where('a.psc_emp_id', $user->emp_id);
-        })
-        ->when(in_array($user->position_id, [13, 158]), function ($query) use ($user) {
-            return $query->whereIn('u.group_id', [$user->emp_id]);
-        })
-        ->groupBy('a.psc_name', 'a.psc_emp_id')
-        ->orderBy(DB::raw('COUNT(DISTINCT a.company_id)'), 'desc')
-        ->get();
+// 2. Pangunahing query simula sa Users Table (para kasama ang walang leads)
+$agentReports = DB::table('users as u')
+    // LEFT JOIN sa assigned_agent para lumabas pa rin ang user kahit walang hawak na lead
+    ->leftJoin('assigned_agent as a', 'a.psc_emp_id', '=', 'u.emp_id')
+    // I-join ang subquery ng contacts_update
+    ->leftJoinSub($latestUpdates, 'cu', function ($join) {
+        $join->on('cu.company_id', '=', 'a.company_id');
+    })
+    ->leftJoin('lead_agent_status as l', 'l.id', '=', 'cu.status')
+    ->select(
+        'u.name as agent_name', // Kinuha sa users table
+        'u.emp_id as psc_emp_id',
+        'u.group_id as group_id',
+        DB::raw('COUNT(DISTINCT a.company_id) as total_assigned'),
+        DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'New Lead' THEN a.company_id END) as total_new_lead"),
+        DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status NOT IN ('New Lead', 'Converted') AND l.lead_status IS NOT NULL THEN a.company_id END) as total_active_leads"),
+        DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'Converted' THEN a.company_id END) as total_converted"),
+        DB::raw('COUNT(DISTINCT a.company_id) as total_amount'),
+        
+        // Ginamit ang NULLIF para maiwasan ang "Division by zero" error kung 0 ang leads ng PSC
+        DB::raw('ROUND(
+            COALESCE(SUM(l.status_percentage), 0) / NULLIF(COUNT(DISTINCT a.company_id), 0), 
+            2
+        ) as average_percentage')
+    )
+    ->whereNotNull('u.name')
+    ->where('u.name', '<>', '')
+    
+    // MGA KONDISYON BASE SA POSITION_ID NG LOGGED-IN USER
+    ->when($user->position_id == 157, function ($query) use ($user) {
+        return $query->where('u.emp_id', $user->emp_id);
+    })
+    ->when(in_array($user->position_id, [13, 158]), function ($query) use ($user) {
+        return $query->where('u.group_id', $user->emp_id);
+    })
+    
+    // Naka-grupo muna sa group_id para magkakasama ang magkakateam
+    ->groupBy('u.group_id', 'u.emp_id', 'u.name')
+    ->orderBy('u.group_id', 'asc')
+    ->orderBy(DB::raw('COUNT(DISTINCT a.company_id)'), 'desc')
+    ->get();
+
 
     return view('reports.agent', compact('agentReports'));
 }
@@ -265,7 +202,7 @@ class ReportsController extends Controller
             ->select([
                 'a.psc_emp_id',
                 'c.company_name',
-                'c.id',
+                'c.id as company_id',
                 'c.address',
                 'l.lead_status',
                 'StatusUpdate.description',

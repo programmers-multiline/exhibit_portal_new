@@ -185,6 +185,8 @@ Route::get('/reports/agent-performance', [ReportsController::class, 'agentreport
 
 // Dito tatawag ang AJAX para kumuha ng detalye kada agent
 Route::get('/reports/agent-details', [ReportsController::class, 'getAssignedDetails'])->name('reports.agent.details');
+Route::get('/reports/company/history', [ReportsController::class, 'getCompanyHistory'])->name('reports.company.history');
+
 
 
 Route::get('/company/files/{company_id}', [AssignedController::class, 'getCompanyFiles']);

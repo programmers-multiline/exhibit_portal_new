@@ -81,6 +81,41 @@
     </div>
 </div>
 
+
+<!-- MOdal for Viewing of Updates History -->
+
+<!-- Modal para sa Pagtingin ng Updates History -->
+<!-- Modal para sa Pagtingin ng Updates History (Naka-pwesto sa Kanan) -->
+<div class="modal fade" id="ViewUpdateHistory" tabindex="-1" role="dialog" aria-hidden="true">
+    <!-- Pinalitan ang modal-dialog para magkaroon ng custom styles -->
+    <div class="modal-dialog modal-lg" role="document" style="
+        margin-right: 20px; 
+        margin-left: auto; 
+        margin-top: 20%; 
+        transform: none;">
+        
+        <div class="modal-content shadow-lg" style="border-radius: 8px;">
+            <div class="modal-header bg-secondary text-white py-2">
+                <h6 class="modal-title font-weight-bold mb-0">
+                    <i class="fas fa-history mr-2"></i> Update History Logs
+                </h6>
+                <button type="button" class="close text-white" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body p-3" style="max-height: 400px; overflow-y: auto;">
+                <!-- Dito papasok ang table mula sa AJAX -->
+            </div>
+            <div class="modal-footer py-1">
+                <button type="button" class="btn btn-sm btn-secondary" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+ <!-- Ending of Modal Viewing of Updates History -->
+
 <script>
 $(document).ready(function() {
     // I-initialize ang variable para sa DataTable instance
@@ -121,7 +156,9 @@ $(document).ready(function() {
                                 else if(row.lead_status === 'Converted') badgeClass = 'badge-success';
                                 else if(row.lead_status) badgeClass = 'badge-info';
 
-                                html += '<td><span class="badge ' + badgeClass + ' px-2 py-1">' + (row.lead_status ?? 'No Status') + '</span></td>';
+                                // Palitan ang lumang linya ng icon nito:
+                                html += '<td><span class="badge ' + badgeClass + ' px-2 py-1">' + (row.lead_status ?? 'No Status') + '</span>';
+                                html += ' <i class="fas fa-history text-primary updatehistory-btn ml-2" style="cursor:pointer;" data-companyid="' + row.company_id + '" title="View History"></i></td>';
                                 html += '<td class="text-left"><small>' + (row.description ?? '-') + '</small></td>';
                                 html += '<td>' + (row.update_date ?? '-') + '</td>';
                                 html += '</tr>';
@@ -155,7 +192,93 @@ $(document).ready(function() {
         });
     });
 });
+
+// Listener para sa pag-click ng History Icon
+$(document).on('click', '.updatehistory-btn', function() {
+    var companyId = $(this).data('companyid');
+    
+    // Loading state sa loob ng History Modal Body
+    $('#ViewUpdateHistory .modal-body').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Loading history logs...</div>');
+    $('#ViewUpdateHistory').modal('show');
+
+    // Patakbuhin ang pangalawang AJAX para sa History
+    $.ajax({
+        url: "{{ route('reports.company.history') }}",
+        type: "GET",
+        data: { company_id: companyId },
+        dataType: "json",
+       success: function(historyData) {
+    if(historyData.length > 0) {
+        // Palitan ang pamagat ng Modal base sa unang nahanap na pangalan ng Kumpanya
+        $('#ViewUpdateHistory .modal-header h5').html('<i class="fas fa-history mr-2"></i> Update History: ' + historyData[0].company_name);
+        
+        // Simula ng Timeline Container
+        var historyHtml = '<div class="timeline-container px-2">';
+
+        $.each(historyData, function(i, hRow) {
+            // Pagpili ng kulay ng icon at text base sa lead status
+            var statusColor = 'secondary';
+            var iconClass = 'fa-circle';
+            
+            if(hRow.lead_status === 'New Lead') {
+                statusColor = 'warning text-dark';
+                iconClass = 'fa-star';
+            } else if(hRow.lead_status === 'Converted') {
+                statusColor = 'success';
+                iconClass = 'fa-check-circle';
+            } else if(hRow.lead_status) {
+                statusColor = 'info';
+                iconClass = 'fa-comments';
+            }
+
+            // Isang Card/Item sa loob ng Timeline
+            historyHtml += '<div class="timeline-item d-flex mb-4 position-relative">';
+            
+            // Ang linyang nagdudugtong sa mga log (maliban sa huling item)
+            if (i < historyData.length - 1) {
+                historyHtml += '<div class="position-absolute bg-light" style="width: 2px; top: 24px; bottom: -24px; left: 11px; z-index: 1;"></div>';
+            }
+
+            // Icon ng Status
+            historyHtml += '  <div class="mr-3 position-relative" style="z-index: 2;">';
+            historyHtml += '    <span class="badge badge-' + (statusColor.includes('text-dark') ? 'warning' : statusColor) + ' rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 24px; height: 24px;">';
+            historyHtml += '      <i class="fas ' + iconClass + '" style="font-size: 11px;"></i>';
+            historyHtml += '    </span>';
+            historyHtml += '  </div>';
+
+            // Detalye ng Log (Kanan)
+            historyHtml += '  <div class="flex-grow-1 bg-light rounded p-3 shadow-xs" style="border-left: 4px solid var(--' + (statusColor.includes('text-dark') ? 'warning' : statusColor) + ');">';
+            historyHtml += '    <div class="d-flex justify-content-between align-items-center mb-1">';
+            historyHtml += '      <span class="badge badge-' + statusColor + ' px-2 py-1 text-uppercase font-weight-bold" style="font-size: 9px;">' + (hRow.lead_status ?? 'No Status') + '</span>';
+            historyHtml += '      <small class="text-muted font-italic"><i class="far fa-clock mr-1"></i>' + (hRow.update_date ?? '-') + '</small>';
+            historyHtml += '    </div>';
+            historyHtml += '    <p class="mb-2 text-dark font-weight-normal font-sm" style="font-size: 12px; line-height: 1.4;">' + (hRow.description ?? 'No description provided.') + '</p>';
+            historyHtml += '    <div class="text-right border-top pt-1 mt-1" style="border-color: #e9ecef !important;">';
+            historyHtml += '      <small class="text-secondary font-weight-bold" style="font-size: 10px;"><i class="fas fa-user-edit mr-1"></i>By: ' + (hRow.user_name ? hRow.user_name : (hRow.updated_by ?? '-')) + '</small>';
+            historyHtml += '    </div>';
+            historyHtml += '  </div>';
+            
+            historyHtml += '</div>'; // Wakas ng isang item
+        });
+
+        historyHtml += '</div>'; // Wakas ng Container
+        
+        $('#ViewUpdateHistory .modal-body').html(historyHtml);
+    } else {
+        $('#ViewUpdateHistory .modal-body').html('<div class="text-center py-4 text-muted"><i class="fas fa-folder-open fa-2x mb-2 d-block"></i>No history logs found.</div>');
+    }
+},
+
+        error: function() {
+            $('#ViewUpdateHistory .modal-body').html('<p class="text-center text-danger">Failed to fetch history. Please try again.</p>');
+        }
+    });
+});
+
+
 </script>
+
+
 
 
 @endsection
