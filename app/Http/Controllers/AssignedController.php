@@ -35,17 +35,17 @@ class AssignedController extends Controller
 
        public function index(Request $request)
         {
-$user       = Auth::user();
+        $user       = Auth::user();
 
-// 1. Kunin ang lahat ng unique na exhibit_name para sa dropdown
-    $exhibits = DB::table('contacts')
-        ->whereNotNull('exhibit_name')
-        ->where('exhibit_name', '<>', '')
-        ->distinct()
-        ->pluck('exhibit_name');
+        // 1. Kunin ang lahat ng unique na exhibit_name para sa dropdown
+            $exhibits = DB::table('contacts')
+                ->whereNotNull('exhibit_name')
+                ->where('exhibit_name', '<>', '')
+                ->distinct()
+                ->pluck('exhibit_name');
 
-    // 2. Kunin ang piniling filter mula sa request ($request->exhibit_filter)
-    $selectedExhibit = $request->input('exhibit_filter');
+            // 2. Kunin ang piniling filter mula sa request ($request->exhibit_filter)
+            $selectedExhibit = $request->input('exhibit_filter');
 
 $rawResults = DB::table('company_list as cm') // 1. Main table is already cm
     ->select([
@@ -91,13 +91,9 @@ $rawResults = DB::table('company_list as cm') // 1. Main table is already cm
    ->when(in_array($user->position_id, [13, 158]), function ($query) use ($user) {
     return $query->whereIn('u.group_id', [$user->emp_id]);
 })
-
+->orderBy('cu.created_at')
     ->get();
-//dd($rawResults);
-
-
-                             /*  --WHERE cm.company_name = 'ERGOTECH'  -- O gamitin ang dynamic filter mo */
-
+          
 // I-group ang mga contact persons sa loob ng iisang object ng kompanya
 $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
     $first = $rows->first();
@@ -141,7 +137,7 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
 return view('assigned.index', compact('companies','lead_agent_status','user_group','user','contact_files','exhibits', 'selectedExhibit'));
  
    
-       // return view('assigned.index');
+
     
         }
 
