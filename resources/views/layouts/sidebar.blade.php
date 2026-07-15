@@ -41,7 +41,7 @@
 					<li class="{{ request()->is('import') || request()->is('import/*') ? 'active' : '' }}">
 						<a href="{{ url('import') }}" class="dropdown-toggle no-arrow">
 							<i class=" micon fas fa-upload"></i>
-							<span class="mtext">import</span>
+							<span class="mtext">imports</span>
 						</a>
 					</li>
 
