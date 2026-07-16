@@ -312,8 +312,16 @@ $('#confirmAssign').click(function(){
           // $('#psc_id').val(''); 
 
             // Reload Table
-           // $('#ContactsTbl').DataTable().ajax.reload(null,false);
-            location.reload(); 
+           $('#ContactsTbl').DataTable().ajax.reload(null, false);
+    
+    // 1. LINISIN ANG LAMAN NG GLOBAL ARRAY
+    selectedCompanies = []; // o kaya: selectedCompanies.length = 0;
+
+    // 2. I-UNCHECK DIN ANG MGA CHECKBOXES SA SCREEN (Para hindi malito ang user)
+    $('.participant_checkbox').prop('checked', false);
+
+    // 3. I-RESET ANG DROPDOWN NG PSC
+    $('#psc_id').val(''); 
 
             //alert("Successfully Assigned!");
              Swal.fire({
