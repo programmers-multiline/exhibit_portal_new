@@ -276,67 +276,6 @@ console.log(selected)
 //
 //Use to Save Assigned PSC    
 
-/* $('#confirmAssign').click(function(){
-
-    let selected = typeof selectedCompanies !== 'undefined' ? [...selectedCompanies] : [];
-    let source_type = $('#source_type').val();
-    let psc_id      = $('#psc_id').val();
-    
-   $('.participant_checkbox:checked').each(function(){
-    let compNameValue = $(this).data('companyname');
-    
-    // I-tsek kung umiiral na ang Company Name sa array para maiwasan ang pagdodoble
-    let exists = selected.some(function(item) {
-        return (typeof item === 'object' && item !== null) ? item.company_name == compNameValue : item == compNameValue;
-    });
-    
-    if (!exists) {
-        selected.push({
-            id           : $(this).val(),                  // Itatabi pa rin kung sakali, pero pangalan ang pangunahing gagamitin
-            company_name : compNameValue,
-            address      : $(this).data('companyaddress'),
-            contactname  : $(this).data('contactname'),
-            contactemail : $(this).data('contactemail'),
-            contactnumber: $(this).data('contactnumber')
-        });
-    }
-
-    
-});
-
-
-    if(source_type == '' || source_type == null) {
-        source_type = 10000;
-    }
-
-    console.log(selected); 
-
-    if(selected.length === 0){
-        alert("Please select participants");
-        return;
-    }
-
-    if(psc_id === ""){
-        alert("Please select PSC");
-        return;
-    }
-
-    $.ajax({
-        url: "/inquiry/bulk-assign",
-        type: "POST",
-        data:{
-            _token     : $('meta[name="csrf-token"]').attr('content'),
-            attendee   : selected, // Array ng objects na ang ipapadala [{id:..., company_name:..., address:...}]
-            psc_id     : psc_id,
-            source_type: source_type
-        },
-        success:function(response){
-            $('#assignModal').modal('hide');
-            $('#ContactsTbl').DataTable().ajax.reload(null,false);
-            // SweetAlert code mo...
-        }
-    });
-}); */
 
 $('#confirmAssign').click(function(){
 

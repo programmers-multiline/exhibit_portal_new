@@ -273,7 +273,7 @@ $('#bulkAssignBtn').click(function(){
 
 $('#confirmAssign').click(function(){
 
-    //let selected = [];
+   // let selected = [];
     let selected = selectedCompanies;
 
     // Get selected participants
@@ -308,9 +308,12 @@ $('#confirmAssign').click(function(){
 
 
             $('#assignModal').modal('hide');
+            // IDAGDAG ITO PARA MA-RESET ANG SELECTION
+          // $('#psc_id').val(''); 
 
             // Reload Table
-            $('#ContactsTbl').DataTable().ajax.reload(null,false);
+           // $('#ContactsTbl').DataTable().ajax.reload(null,false);
+            location.reload(); 
 
             //alert("Successfully Assigned!");
              Swal.fire({
