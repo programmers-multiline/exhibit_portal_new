@@ -500,6 +500,7 @@ function LoadContacts()
             d.endDate       = $('#end').val();
             d.pscFilter     = $('#psc_filter').val();
             d.addressFilter = $('#addressFilter').val();
+            
         }
     },
 
