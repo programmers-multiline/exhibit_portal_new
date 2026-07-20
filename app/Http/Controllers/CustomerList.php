@@ -49,24 +49,9 @@ class CustomerList extends Controller
     {
         return view('client.client_card');
     }
-       /*  public function ClientCardList(Request $request)
-        {
-            $clients = DB::table('customer_list as c')
-                ->leftJoin('assigned_agent as a', 'a.company_id', '=', 'c.id')
-                ->leftJoin('users as b', 'b.emp_id', '=', 'a.psc_emp_id')
-                //->leftJoin('ph_address as p', 'p.cor_code', '=', 'customer_list.city_province_code')
-                ->select(
-                    'c.*',
-                   // 'b.full_name',
-                     DB::raw("CONCAT(b.first_name, ' ', b.last_name) as full_name"),
-                    'c.assigned_date'
-                )
-                ->paginate(10);
+       
 
-            return response()->json($clients);
-        } */
-
-            public function ClientCardList(Request $request)
+ public function ClientCardList(Request $request)
 {
     $query = DB::table('customer_list as c')
         ->leftJoin('users as u', 'u.emp_id', '=', 'c.psc_emp_id')
