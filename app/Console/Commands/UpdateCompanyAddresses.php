@@ -65,6 +65,7 @@ $response = Http::baseUrl('https://maps.googleapis.com')
 
                     DB::table('company_list')
                         ->where('id', $company->id) 
+                        ->whereNull('address')
                         ->update(['address' => $formattedAddress]);
 
                     $this->info("✔ Tagumpay: {$formattedAddress}");
