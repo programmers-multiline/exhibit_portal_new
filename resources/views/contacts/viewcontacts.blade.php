@@ -74,15 +74,6 @@
             </button>
         </div>
 
-        <!-- Assign PSC Button -->
-        <!-- Ginawang d-flex at align-items-center kasama ang justify-content-md-end para manatili sa kanan -->
-       <!--  <div class="col-3 col-md-3 d-flex align-items-center justify-content-md-start">
-            @if (in_array(auth()->user()->position_id, [13, 237]))
-                <button type="button" class="btn btn-success d-inline-flex align-items-center justify-content-center px-4 shadow-sm text-white" id="">
-                    <i class="bi bi-person-plus me-2"></i> Assign PSC
-                </button>
-            @endif
-        </div> -->
 
 
     </form>
@@ -114,6 +105,18 @@
                     <option value="assigned">With PSC Assigned</option>
                 </select>
             </div>
+
+            <div class="form-group d-none ms-3" id="FilterAddressWrapper">
+             
+                <select id="addressFilter" name="addressFilter" class="form-control">
+                    <option value="">All</option>
+                    <option value="with">With Address</option>
+                    <option value="without">No Address</option>
+                </select>
+            </div>
+
+            
+      
 
 
             <table id="ContactsTbl" class="table table-striped table-hover align-middle nowrap w-100" style="margin-top: 15px !important;">
@@ -493,9 +496,10 @@ function LoadContacts()
     ajax: {
         url: "{{ route('contacts.viewcontacts') }}",
         data: function (d) {
-            d.startDate = $('#start').val();
-            d.endDate   = $('#end').val();
-            d.pscFilter = $('#psc_filter').val();
+            d.startDate     = $('#start').val();
+            d.endDate       = $('#end').val();
+            d.pscFilter     = $('#psc_filter').val();
+            d.addressFilter = $('#addressFilter').val();
         }
     },
 
@@ -545,12 +549,7 @@ function LoadContacts()
         { targets: 6, className: 'action_col1' }
     ],
 
-  /*   initComplete: function() {
-        $('.dataTables_length').addClass('d-flex align-items-center');
-        $('#assignPscWrapper').removeClass('d-none').css('margin-left', '20px').appendTo('.dataTables_length');
-        $('#FilterPscWrapper').removeClass('d-none').css('margin-left', '80px').appendTo('.dataTables_length');
-        
-    }, */
+
 
 initComplete: function() {
     // 1. Gumawa ng parent row na may flexbox at justify-content-between para itulak ang search sa kanan at filters sa kaliwa
@@ -569,6 +568,12 @@ initComplete: function() {
     if ($('#FilterPscWrapper').length) {
         $('#FilterPscWrapper').removeClass('d-none').css({'margin-right': '15px', 'margin-bottom': '0px'}).appendTo(leftGroup);
     }
+
+     if ($('#FilterAddressWrapper').length) {
+        $('#FilterAddressWrapper').removeClass('d-none').css({'margin-right': '15px', 'margin-bottom': '0px'}).appendTo(leftGroup);
+    }
+
+    
 
     // 4. Kunin ang orihinal na Search bar at alisin ang mga default margin nito
     var rightGroup = $('.dataTables_filter');
@@ -623,6 +628,11 @@ $(document).on('change', '.participant_checkbox', function() {
 
 // Makikinig ito sa tuwing babaguhin ang seleksyon sa dropdown
 $('#psc_filter').on('change', function() {
+    // I-trigger ang muling pag-load at pag-filter ng DataTables gamit ang bagong halaga
+    $('#ContactsTbl').DataTable().draw();
+});
+
+$('#addressFilter').on('change', function() {
     // I-trigger ang muling pag-load at pag-filter ng DataTables gamit ang bagong halaga
     $('#ContactsTbl').DataTable().draw();
 });
