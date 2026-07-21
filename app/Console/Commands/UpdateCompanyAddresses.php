@@ -21,9 +21,7 @@ class UpdateCompanyAddresses extends Command
         }
 
         $companies = DB::table('company_list')
-            ->whereNull('address') 
             ->orWhere('address', '')
-            ->where('id',758)
             ->get();
 
         if ($companies->isEmpty()) {
@@ -33,24 +31,16 @@ class UpdateCompanyAddresses extends Command
 
         $this->info('May nakitang ' . $companies->count() . ' na kumpanya...');
 
-        foreach ($companies as $company) {
+              foreach ($companies as $company) {
             $this->line("--------------------------------------------------");
             $this->line("Sinusuri ang kumpanya: {$company->company_name}...");
 
             try {
-                // Tinatawagan ang totoong Google API Maps server
-                /* $response = Http::get('https://googleapis.com', [
-                    'address' => trim($company->company_name),
-                    'key'     => $apiKey
-                ]); */
-
-                // PALITAN ANG LUMANG HTTP::GET NG GANITONG BULK FORMAT:
-$response = Http::baseUrl('https://maps.googleapis.com')
-    ->get('/maps/api/geocode/json', [
-        'address' => trim($company->company_name),
-        'key'     => $apiKey
-    ]);
-
+                $response = Http::baseUrl('https://googleapis.com')
+                    ->get('/maps/api/geocode/json', [
+                        'address' => trim($company->company_name),
+                        'key'     => $apiKey
+                    ]);
 
                 if (!$response->successful()) {
                     $this->error("❌ HTTP Error! Status Code: " . $response->status());
@@ -64,15 +54,26 @@ $response = Http::baseUrl('https://maps.googleapis.com')
                 if ($googleStatus === 'OK' && !empty($data['results'])) {
                     $formattedAddress = $data['results'][0]['formatted_address'];
 
-                    DB::table('company_list')
-                        ->where('id', $company->id) 
-                        ->whereNull('address')
+                    // DEBUG: I-check kung ano ang ia-update
+                    $this->line("Subukang i-update ang ID {$company->id} gamit ang: {$formattedAddress}");
+
+                    // TINANGGAL ANG whereNull PARA GUMANA SA EMPTY STRINGS
+                    $affectedRows = DB::table('company_list')
+                        ->where('id', $company->id)
                         ->update(['address' => $formattedAddress]);
 
-                    $this->info("✔ Tagumpay: {$formattedAddress}");
+                    // DEBUG DATABASE: I-verify kung may nabago sa DB
+                    if ($affectedRows > 0) {
+                        $this->info("✔ Tagumpay: Naka-update ng ($affectedRows) row/s sa database.");
+                    } else {
+                        $this->warn("⚠ Babala: OK ang API pero may isyu sa DB (Baka pareho lang ang address o mali ang ID).");
+                    }
                 } else {
                     $errorMessage = $data['error_message'] ?? 'Walang mensahe.';
-                    $this->warn("❌ Bigo: {$googleStatus} - {$errorMessage}");
+                    $this->warn("❌ Bigo ang Google API: {$googleStatus} - {$errorMessage}");
+                    
+                    // DEBUG API: I-print ang buong JSON response para makita ang error details
+                    $this->line("DEBUG API RESPONSE: " . json_encode($data));
                 }
 
             } catch (\Exception $e) {
@@ -81,6 +82,7 @@ $response = Http::baseUrl('https://maps.googleapis.com')
 
             usleep(200000); 
         }
+
 
         return Command::SUCCESS;
     }
