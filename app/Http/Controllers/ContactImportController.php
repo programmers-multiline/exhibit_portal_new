@@ -19,6 +19,9 @@ use App\Models\AssignedAgent;
 use App\Models\AssignedAgentLog;
 use App\Models\ContactsFile;
 use App\Models\ContactsUpdate;
+use App\Models\OpportunityLostReasonLog;
+use App\Models\product_list;
+use App\Models\ProductInquiryLogs;
 
 class ContactImportController extends Controller
 {
@@ -96,8 +99,10 @@ class ContactImportController extends Controller
 
 public function ViewContacts(Request $request)
 {
-    $user = Auth::user();    
-       
+    $user          = Auth::user();
+    $addressFilter = $request->addressFilter??'Test';
+
+
     if ($request->ajax()) {
         // 1. Simulan ang query gamit ang variable ($query) at huwag lagyan ng semicolon o get() sa dulo
         $query = DB::table('contacts')
@@ -124,6 +129,21 @@ public function ViewContacts(Request $request)
                 'ua.last_name'       
             ]) 
             ->where('company_list.company_status', '=', 1); // Nilagyan ng table prefix para iwas ambiguity
+
+                            // Address Filter
+                if ($addressFilter == 'with') {
+                $query->whereRaw("
+                    company_list.address IS NOT NULL
+                    AND TRIM(company_list.address) <> ''
+                ");
+            }
+
+            if ($addressFilter == 'without') {
+                $query->whereRaw("
+                    company_list.address IS NULL
+                    OR TRIM(company_list.address) = ''
+                ");
+            }
 
         // 2. Date Filtering Logic para sa Contacts
         if ($request->filled('startDate') && $request->filled('endDate')) {
@@ -550,6 +570,7 @@ public function bulkAssignInquiry(Request $request)
         'attendee' => 'required|array',
         'psc_id'   => 'required'
     ]);
+   
 
     DB::beginTransaction();
 
@@ -574,6 +595,8 @@ public function bulkAssignInquiry(Request $request)
             $html_client_name  = $attendee['contactname'] ?? null;
             $html_email        = $attendee['contactemail'] ?? null;
             $html_phone        = $attendee['contactnumber'] ?? null;
+            $inquirer_id       = $attendee['inquirer_id'] ?? null;
+         
 
             // Laktawan ang loop kung blangko ang pangalan ng kumpanya para iwas DB crash
             if (empty($html_company_name)) {
@@ -645,6 +668,17 @@ public function bulkAssignInquiry(Request $request)
                     'updated_at'   => now()
                 ]
             );
+//dd($inquiry_id);
+                // Update the Inquiry table para malaman kung sinong PSC ang nailagay
+             if ($inquirer_id) {
+                DB::connection('mysql_third')
+                    ->table('rfq_tbl_inquiry')
+                    ->where('inquirer_id', $inquirer_id)
+                    ->update([
+                        'assigned_psc'      => $request->psc_id,
+                        'assigned_psc_name' => $psc_name 
+                    ]);
+                             }
 
         }
 
@@ -698,11 +732,13 @@ public function ContactUpdateStatus(Request $request, $id)
 
 
     $request->validate([
-    'status'        => 'required',
-    'customer_code' => 'required_if:status,10',
-    'files'         => 'required_if:status,9|array', // Dinagdagan ng |array
-    'files.*'       => 'file|mimes:pdf,jpg,png,jpeg|max:2048',
-]);
+    'status'          => 'required',
+    'product_inquiry' => 'required_if:status,4',
+    'customer_code'   => 'required_if:status,10',
+    'ReasonOfLost'    => 'required_if:status,11',
+    'files'           => 'required_if:status,9|array',             // Dinagdagan ng |array
+    'files.*'         => 'file|mimes:pdf,jpg,png,jpeg|max:2048',
+    ]);
 
 
     try {
@@ -727,6 +763,25 @@ public function ContactUpdateStatus(Request $request, $id)
             'description'      => $request->description
         ]);
 
+
+         if ((int)$request->status === 4) {
+            
+            if ($request->filled('product_inquiry')) {
+
+                    foreach ($request->product_inquiry as $productId) {
+
+                        ProductInquiryLogs::create([
+                            'company_id'      => $id,
+                            'product_id'      => $productId,
+                            'product_remarks' => $request->description, // o $request->product_remarks kung meron
+                            'created_by'      => $user->emp_id,
+                        ]);
+
+                    }
+                }
+        }
+
+
         // 🔥 ONLY RUN IF STATUS = 9
          if ($request->status == 9) {
 
@@ -742,7 +797,7 @@ public function ContactUpdateStatus(Request $request, $id)
 
                     ContactsFile::create([
                         'company_id'  => $id,
-                        'status_id'  =>  $request->status,
+                        'status_id'   => $request->status,
                         'file_path'   => $path,
                         'file_name'   => $file->getClientOriginalName(),
                         'file_type'   => $file->getClientMimeType(),
@@ -756,18 +811,44 @@ public function ContactUpdateStatus(Request $request, $id)
 
 
 
-         if ((int)$request->status === 10) {
 
-           if (!$Contact->company) {
+        // Para ito sa pag update ng status to Converted, kailagan mailagay yung customer code na galing sa SAP
+        if ((int)$request->status === 10) {
+                // Kunin ang mismong Company object gamit ang relationship method
+                $company = $Contact->company()->first();
+
+                if (!$company) {
                     throw new \Exception("No company linked to this participant.");
                 }
 
-              $Contact->company()->update([
-                        'customer_code' => $request->customer_code,
-                        'updated_at'    => now()
-                    ]);
-            
+                // Suriin kung ginagamit na ng iba ang customer code gamit ang ID ng kumpanya
+                $codeExists = \App\Models\Company::where('customer_code', $request->customer_code)
+                    ->where('id', '!=', $company->id) 
+                    ->exists();
+
+                if ($codeExists) {
+                    throw new \Exception("The customer code '{$request->customer_code}' already exists.");
+                }
+
+                $company->update([
+                    'customer_code' => $request->customer_code,
+                    'updated_at' => now()
+                ]);
             }
+
+
+
+        // 🔥 ONLY RUN IF STATUS = 11 (Lost)
+            if ((int)$request->status === 11) {
+                OpportunityLostReasonLog::create([
+                    'company_id'   => $id,
+                    'reason_id'    => $request->ReasonOfLost,
+                    'lost_remarks' => $request->description,
+                    'created_by'   => $user->emp_id
+
+                ]);
+            }
+
 
         DB::commit();
 
