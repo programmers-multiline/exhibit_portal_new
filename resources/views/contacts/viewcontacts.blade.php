@@ -215,6 +215,37 @@ Save Assignment
  <!-- Ending of Modal Assigning of PSC -->
 
 
+  <!-- Modal to update Address Modal -->
+ <div class="modal fade" id="AddressModal">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      
+      <div class="modal-header">
+        <h5 class="modal-title">Updating Address Form</h5>
+       <button type="button" class="close" data-dismiss="modal" aria-label="Close" style="background: none; border: none; font-size: 1.5rem; color: #000; cursor: pointer;">
+      </div>
+
+      <div class="modal-body">
+        <input type="hidden" id="company_id">
+         <p id="company_name" class="bg bg-success text-white p-2"></p>   
+        <div class="mb-3">
+            <label>Input Addres</label>
+            <textarea class="form-control" id="ContactAddress"></textarea>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-success" id="saveAddress">
+            Save
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+<!-- Ending of Modal Update Address Modal -->
+
+
 @endsection
 
 
@@ -241,6 +272,63 @@ startDateInput.addEventListener('change', function() {
 
 
 <script>
+//Use to open the Modal and display details about company
+$(document).on('click', '#UpdateAddressModal', function(){
+
+    var company_id   = $(this).data('company_id');
+    var company_name = $(this).data('company_name');
+    var status       = $(this).data('status');
+    var caddress     = $(this).data('caddress');
+
+console.log(company_id)
+
+    $('#company_name').text(company_name);
+    $('#company_id').val(company_id);
+    $('#status').val(status);
+    $('#ContactAddress').text(caddress);
+    $('#AddressModal').modal('show');
+});
+
+//Use to update CompanyAddress
+$('#saveAddress').click(function(){
+
+    let company_id = $('#company_id').val();
+    let address    = $('#ContactAddress').val();
+
+   console.log(company_id)
+
+    $.ajax({
+        url: '/companies/update-address',
+        type: 'POST',
+        data: {
+            _token    : '{{ csrf_token() }}',
+            company_id: company_id,
+            address   : address
+        },
+        success: function(response){
+           // $('#CompanyTbl').DataTable().ajax.reload(null, false);
+           // alert('Address updated!');
+         //  location.reload();
+
+            Swal.fire({
+                icon             : 'success',
+                title            : 'Saved!',
+                text             : 'Company Address has been updated!',
+                timer            : 2000,
+                showConfirmButton: false,
+                toast            : true,
+                position         : 'top-center'
+                 });
+            $('#AddressModal').modal('hide');
+            $('#Address').val('');
+            $('#ContactsTbl').DataTable().draw(); // I-refresh ang DataTables
+        }
+    });
+
+});
+
+
+
 //Use to multiple select participants for assigning of PSC
 $('#bulkAssignBtn').click(function(){
 
@@ -401,89 +489,6 @@ $(document).ready(function(){
 });//Ending of Document Ready
 
 
-/* var selectedCompanies = [];
-function LoadContacts()
-{
-   $('#ContactsTbl').DataTable({
-    processing: true,
-    serverSide: true,
-    ajax: {
-        url: "{{ route('contacts.viewcontacts') }}",
-        data: function (d) {
-            d.startDate = $('#start').val();
-            d.endDate = $('#end').val();
-        }
-    },
-
-    columns: [
-        { data: 'checkbox', name: 'checkbox'},
-        { data: 'exhibit_name', name: 'contacts.exhibit_name' },
-     // PINAGSAMANG COMPANY AT ADDRESS
-    { 
-        data: 'company_name', 
-        name: 'company_list.company_name',
-        render: function(data, type, row) {
-            return `
-                <div class="company-info-block">
-                    <div class="company-title" style="color:#01134A; font-weight:bold;">${row.company_name || ''}</div>
-                    <div class="company-address">
-                        <i class="fas fa-map-marker-alt address-icon text-primary"></i> ${row.address || '—'}
-                        <i class="fas fa-edit" data-idcom="${row.id}" style="color:red;cursor:pointer;"></i>
-                    </div>
-                </div>
-            `;
-        }
-    },
-
-        // PINAGSAMANG COLUMN PARA SA CONTACT INFO
-    { 
-        data: 'contact_name', 
-        name: 'contacts.name',
-        render: function(data, type, row) {
-            return `
-                <div class="contact-info-block">
-                    <div class="contact-name" style="color:#8F6E03; font-weight:bold;">${row.contact_name || ''}</div>
-                    <div class="contact-item">
-                        <i class="fas fa-envelope contact-icon" style="color:#01454A;"></i> ${row.email || '—'}
-                    </div>
-                    <div class="contact-item">
-                        <i class="fas fa-phone contact-icon" style="color:#402101;"></i> ${row.phone || '—'}
-                        <i class="fas fa-edit" data-idcom="${row.id}" style="color:red;cursor:pointer;"></i>
-                    </div>
-                </div>
-            `;
-        }
-    },
-
-        { data: 'remarks', name: 'contacts.remarks' },
-        { data: 'date', name: 'contacts.date' },
-        { data: 'action', name: 'action', orderable: false, searchable: false }
-    ],
-
-    // DITO ILALAGAY ANG LOGIC PARA SA WORD BREAK AT ALIGNMENT
-    columnDefs: [
-        {
-            targets: [2,3,4], // Index ng columns na apektado (0-based index: 3 = address, 5 = email)
-            className: 'address-wrap' // Custom CSS class na gagawin natin sa ibaba
-        },
-        {
-            targets: 6, // Index ng columns na apektado (0-based index: 3 = address, 5 = email)
-            className: 'action_col1' // Custom CSS class na gagawin natin sa ibaba
-        }
-    ],
-
-    initComplete: function() {
-        // Gawing flexbox ang container ng "Show entries"
-        $('.dataTables_length').addClass('d-flex align-items-center');
-
-        // Ilipat ang wrapper at puwersahin ang espasyo gamit ang inline style css
-        $('#assignPscWrapper').removeClass('d-none')
-                            .css('margin-left', '20px') 
-                            .appendTo('.dataTables_length');
-    }
-});
-
-} */
 
 // 1. Dito itatabi ang lahat ng ID ng mga naka-check na kumpanya
 var selectedCompanies = [];
@@ -516,7 +521,7 @@ function LoadContacts()
                         <div class="company-title" style="color:#01134A; font-weight:bold;">${row.company_name || ''}</div>
                         <div class="company-address">
                             <i class="fas fa-map-marker-alt address-icon text-primary"></i> ${row.address || '—'}
-                            <i class="fas fa-edit" data-idcom="${row.id}" style="color:red;cursor:pointer;"></i>
+                            <i class="fas fa-edit" id="UpdateAddressModal" data-idcom="${row.id}" data-idcom="${row.id}" data-caddress="${row.address}" data-company_name="${row.company_name}" data-company_id="${row.company_id}" style="color:red;cursor:pointer;"></i>
                         </div>
                     </div>
                 `;
@@ -533,8 +538,8 @@ function LoadContacts()
                             <i class="fas fa-envelope contact-icon" style="color:#01454A;"></i> ${row.email || '—'}
                         </div>
                         <div class="contact-item">
-                            <i class="fas fa-phone contact-icon" style="color:#402101;"></i> ${row.phone || '—'}
-                            <i class="fas fa-edit" data-idcom="${row.id}" style="color:red;cursor:pointer;"></i>
+                            <i class="fas fa-phone contact-icon" style="color:#402101;"></i> ${row.phone || '—'} 
+                            <i class="fas fa-edit" data-idcom="${row.id}" data-caddress="${row.address}" data-company_name="${row.company_name}" data-company-id="${row.company_id}" style="color:red;cursor:pointer;"></i>
                         </div>
                     </div>
                 `;

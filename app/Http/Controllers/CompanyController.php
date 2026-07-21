@@ -69,22 +69,50 @@ return response()->json($company);
 }
 
  
-//Use to update the Status of Exhibit Attendee
+
 public function updateAddress(Request $request)
 {
-   $request->validate([
+    
+    //dd($user->emp_id);
+    $request->validate([
         'company_id' => 'required|string',
         'address'    => 'required|string'
     ]);
-//dd($request->address);
-    \DB::table('company_list')
-        ->where('id', $request->company_id)
-        ->update([
-            'Address' => $request->address
-        ]);
+
+    // Gagamit ng transaction para ligtas ang sabay na operasyon
+    DB::transaction(function () use ($request) {
+        
+        // 1. Kunin muna ang kasalukuyang address (ito ang magiging previous_address)
+        $company = DB::table('company_list')
+            ->where('id', $request->company_id)
+            ->first();
+
+        if ($company) {
+            $previousAddress = $company->address;
+
+            // 2. I-update ang address sa company_list
+            DB::table('company_list')
+                ->where('id', $request->company_id)
+                ->update([
+                    'address' => $request->address
+                ]);
+
+            $user  = Auth::user();
+            // 3. I-insert ang log sa update_address_logs table
+            DB::table('update_address_logs')->insert([
+               'company_id'       => $request->company_id,
+               'previous_address' => blank($previousAddress) ? 'No Previous Address' : $previousAddress,
+               'current_address'  => $request->address,
+               'updated_by'       => $user->emp_id,                                                        // Palitan ng ID ng naka-login na user
+               'created_at'       => now(),
+               'updated_at'       => now(),
+            ]);
+        }
+    });
 
     return response()->json(['success' => true]);
 }
+
 
 
 public function UpdateContactDetails(Request $request)
