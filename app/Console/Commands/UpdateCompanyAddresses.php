@@ -23,6 +23,7 @@ class UpdateCompanyAddresses extends Command
         $companies = DB::table('company_list')
             ->whereNull('address') 
             ->orWhere('address', '')
+            ->where('id',758)
             ->get();
 
         if ($companies->isEmpty()) {
