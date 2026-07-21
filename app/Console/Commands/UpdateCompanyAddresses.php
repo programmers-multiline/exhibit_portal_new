@@ -36,8 +36,8 @@ class UpdateCompanyAddresses extends Command
             $this->line("Sinusuri ang kumpanya: {$company->company_name}...");
 
             try {
-                $response = Http::baseUrl('https://googleapis.com')
-                    ->get('/maps/api/geocode/json', [
+                    $response = Http::baseUrl('https://maps.googleapis.com')
+                    ->get('maps/api/geocode/json', [ // <--- Ganito dapat
                         'address' => trim($company->company_name),
                         'key'     => $apiKey
                     ]);
