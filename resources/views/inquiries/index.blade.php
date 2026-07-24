@@ -110,12 +110,11 @@
        <table id="ContactsTbl" class="table table-hover align-middle w-100" style="margin-top: 15px !important; border-collapse: separate; border-spacing: 0 8px;">
             <thead style="background-color: #2e3641; color: #ffffff;" class="text-uppercase small fw-bold">
                 <tr>
-                    <th style="width: 5%; text-align: center;">Select</th>
+                    <th style="width: 5%; text-align: center;">#</th>
                     <th>Company Info</th>
                     <th>Contact Info</th>
                     <th style="padding: 12px 15px;">Category</th>
                     <th>Product Inquiry</th>
-                   
                     <th>Date</th>
                 </tr>
             </thead>
@@ -235,8 +234,8 @@ startDateInput.addEventListener('change', function() {
 $('#bulkAssignBtn').click(function(){
 
     //let selected = [];
-    let source_data =$(this).data('inquiry');
-    let selected = selectedCompanies;
+    let source_data = $(this).data('inquiry');
+    let selected    = selectedCompanies;
 
    // alert(selected);
    console.log(source_data);
@@ -244,7 +243,7 @@ $('#bulkAssignBtn').click(function(){
 
  $('.participant_checkbox:checked').each(function(){
     selected.push({
-        id           : $(this).data('inquirer_id'),      // Idinagdag ang 'id:' key dito
+        inquirer_id  : $(this).data('inquirer_id'),      // Idinagdag ang 'id:' key dito
         company_name : $(this).data('companyname'),
         address      : $(this).data('companyaddress'),
         contactname  : $(this).data('contactname'),
@@ -254,7 +253,7 @@ $('#bulkAssignBtn').click(function(){
 });
 
 
-console.log(selected)
+//console.log(selected)
 
     if(selected.length === 0){
             Swal.fire({
@@ -279,10 +278,13 @@ console.log(selected)
 
 $('#confirmAssign').click(function(){
 
-    let selected = typeof selectedCompanies !== 'undefined' ? [...selectedCompanies] : [];
-    let source_type = $('#source_type').val();
-    let psc_id      = $('#psc_id').val();
-    
+    let selected          = typeof selectedCompanies !== 'undefined' ? [...selectedCompanies] : [];
+    let source_type       = $('#source_type').val();
+    let psc_id            = $('#psc_id').val();
+    //let psc_selected_name = $('#psc_id option:selected').text().trim();  // 1. Kunin ang pangalan at linisin ang mga spaces gamit ang .trim()
+
+   // console.log(psc_selected_name)
+
     $('.participant_checkbox:checked').each(function(){
         let idValue = $(this).val();
         let compNameValue = $(this).data('companyname');
@@ -298,12 +300,12 @@ $('#confirmAssign').click(function(){
         
         if (!exists) {
             selected.push({
-                id            : idValue,
-                company_name  : compNameValue,
-                companyaddress: $(this).data('companyaddress'),
-                contactname   : $(this).data('contactname'),
-                contactemail  : $(this).data('contactemail'),
-                contactnumber : $(this).data('contactnumber')
+                inquirer_id      : idValue,
+                company_name     : compNameValue,
+                companyaddress   : $(this).data('companyaddress'),
+                contactname      : $(this).data('contactname'),
+                contactemail     : $(this).data('contactemail'),
+                contactnumber    : $(this).data('contactnumber')
             });
         }
     });
@@ -335,22 +337,30 @@ $('#confirmAssign').click(function(){
         url: "/inquiry/bulk-assign",
         type: "POST",
         data:{
-            _token     : $('meta[name="csrf-token"]').attr('content'),
-            attendee   : cleanAttendeeData, // 🔥 Binago: Ginamit ang sinalang malinis na array ng objects
-            psc_id     : psc_id,
-            source_type: source_type
+            _token           : $('meta[name="csrf-token"]').attr('content'),
+            attendee         : cleanAttendeeData,                              // 🔥 Binago: Ginamit ang sinalang malinis na array ng objects
+            psc_id           : psc_id,
+            source_type      : source_type
         },
-        success:function(response){
-            $('#assignModal').modal('hide');
-            $('#ContactsTbl').DataTable().ajax.reload(null,false);
-            
-            Swal.fire({
-                icon: 'success',
-                title: 'Success',
-                text: response.message
-            });
-        }
-    });
+       success: function(response) {
+                // 1. Show the success alert immediately
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Success',
+                    text: response.message,
+                    timer: 2000, // Automatically closes alert after 2 seconds
+                    showConfirmButton: false
+                });
+
+                // 2. Wait 2 seconds, then hide modal and reload table
+                setTimeout(function() {
+                    $('#assignModal').modal('hide');
+                    $('#ContactsTbl').DataTable().ajax.reload(null, false);
+                }, 2000); 
+            }
+
+    }); 
+
 });
 
 
@@ -428,6 +438,9 @@ function LoadContacts()
         ajax      : {
             url: "{{ route('inquiries.index') }}",
             data: function (d) {
+                console.log("Start:", $('#start').val());
+                console.log("End:", $('#end').val());
+
                 d.startDate = $('#start').val();
                 d.endDate   = $('#end').val();
                 d.pscFilter = $('#psc_filter').val();
@@ -435,13 +448,14 @@ function LoadContacts()
         },
         columns: [
                     {
-                data: 'assigned_psc',
-                name: 'inq.assigned_psc',
+                data: 'assigned_psc_name',
+                name: 'inq.assigned_psc_name',
                 orderable: false,
                 searchable: false,
                 render: function(data, type, row) {
-                    // Suriin kung walang laman (null, undefined, o empty string)
-                    if (data === null || data === undefined || data.trim() === '') {
+                    // Suriin kung walang laman (null, undefined, o empty string) 
+                        if (data === null || data === undefined || String(data).trim() === '')
+                             {
                         // Magpapakita ng checkbox kung WALANG LAMAN ang assigned_psc
                         return `<div class="form-check d-flex justify-content-center">
                                     <input class               = "participant_checkbox form-check-input border-secondary contact-checkbox"
@@ -485,9 +499,9 @@ function LoadContacts()
                 render: function(data, type, row) {
                     // Halimbawa: Kung may pscFilter o pscName, gawing green badge. Kung wala, checkbox.
                     if(row.category_name) { // Palitan ng totoong psc column kung meron na sa query
-                        return `<span class="badge bg-white text-success border border-success px-3 py-2 fs-6 fw-normal">${row.category_name}</span>`;
+                        return `<span class="badge bg-white text-primary border border-primary mb-2">Source:${row.event_code}</span><br><span class="badge bg-white text-success border border-success px-3 py-2 fs-6 fw-normal"> ${row.category_name}</span>`;
                     }
-                    return `<div class="form-check"><input class="form-check-input border-secondary" type="checkbox" value="${data}"></div>`;
+                    return `<div class="form-check">--</div>`;
                 }
             },
             {

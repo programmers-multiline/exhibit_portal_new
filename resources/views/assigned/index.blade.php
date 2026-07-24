@@ -342,7 +342,7 @@
 
 
  <!-- Modal to update the Status of Attendees -->
- <div class="modal fade" id="statusModal">
+ <div class="modal fade"  id="statusModal">
   <div class="modal-dialog">
     <div class="modal-content">
       
@@ -371,6 +371,36 @@
             </select>
         </div>
 
+         <div class="mb-3" id="ReasonOfLostDiv" style="display:none;">
+            <label>Select Reason</label>
+            <select class="form-control" id="ReasonOfLost">
+                     <option value="">-- Select Reason --</option>
+                    @foreach($lost_reason as $lost_reason_id)
+                        <option value="{{ $lead_status->id }}" data-type_reason="{{ $lost_reason_id->type_reason }}">
+                            {{ $lost_reason_id->type_reason }}
+                        </option>
+                    @endforeach
+            </select>
+        </div>
+
+        <div class="mt-2" id="ProductInquiryDiv" style="display:none;">
+            <span style="font-size:12px; font-weight:500;">Product Inquiry</span>
+
+            <select id="product_inquiry"
+                    name="product_inquiry[]"
+                    multiple
+                    style="width:100%; min-height:150px; " class="form-control select2 mb-3">
+
+                @foreach($products as $product)
+                    <option value="{{ $product->id}}">
+                        {{ $product->name }}
+                    </option>
+                @endforeach
+
+            </select>
+        </div>
+
+
         <div class="mb-3" id="signedProposalFileWrapper" style="display:none;">
             <label>Upload Signed Proposal</label>
             <input type="file" class="form-control" id="signed_proposal_file" multiple>
@@ -383,7 +413,7 @@
 
 
         <div class="mb-3">
-            <label>Description</label>
+            <label>Remarks</label>
             <textarea class="form-control" id="description"></textarea>
         </div>
 
@@ -538,9 +568,30 @@
 .img-thumbnail{
     object-fit: cover;
 }
+
+/* Baguhin ang kulay kapag naka-hover ang mouse sa listahan */
+.select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #c09402 !important; /* Palitan ang hex code sa gusto mong kulay */
+    color: #ffffff !important;            /* Kulay ng teksto kapag naka-hover */
+}
+
+
 </style>
 
 <script>
+$('#product_inquiry').select2({
+    dropdownParent: $('#statusModal')
+});
+
+/* $('#statusModal').on('shown.bs.modal', function () {
+    $('#product_inquiry').select2({
+        dropdownParent: $('#iyongModalID')
+    });
+}); */
+
+
+
+
 //Viewing of Update History
 // Listener para sa pag-click ng History Icon
 $(document).on('click', '.updatehistory-btn', function() {
@@ -556,7 +607,11 @@ $(document).on('click', '.updatehistory-btn', function() {
         type: "GET",
         data: { company_id: companyId },
         dataType: "json",
-       success: function(historyData) {
+       success: function(response) 
+       {
+    var historyData = response.history;
+    var products    = response.products;
+
     if(historyData.length > 0) {
         // Palitan ang pamagat ng Modal base sa unang nahanap na pangalan ng Kumpanya
         $('#ViewUpdateHistory .modal-header h5').html('<i class="fas fa-history mr-2"></i> Update History: ' + historyData[0].company_name);
@@ -564,51 +619,89 @@ $(document).on('click', '.updatehistory-btn', function() {
         // Simula ng Timeline Container
         var historyHtml = '<div class="timeline-container px-2">';
 
-        $.each(historyData, function(i, hRow) {
-            // Pagpili ng kulay ng icon at text base sa lead status
-            var statusColor = 'secondary';
-            var iconClass = 'fa-circle';
-            
-            if(hRow.lead_status === 'New Lead') {
-                statusColor = 'warning text-dark';
-                iconClass = 'fa-star';
-            } else if(hRow.lead_status === 'Converted') {
-                statusColor = 'success';
-                iconClass = 'fa-check-circle';
-            } else if(hRow.lead_status) {
-                statusColor = 'info';
-                iconClass = 'fa-comments';
-            }
+      $.each(historyData, function(i, hRow) {
 
-            // Isang Card/Item sa loob ng Timeline
-            historyHtml += '<div class="timeline-item d-flex mb-4 position-relative">';
-            
-            // Ang linyang nagdudugtong sa mga log (maliban sa huling item)
-            if (i < historyData.length - 1) {
-                historyHtml += '<div class="position-absolute bg-light" style="width: 2px; top: 24px; bottom: -24px; left: 11px; z-index: 1;"></div>';
-            }
+    // Pagpili ng kulay ng icon at text base sa lead status
+    var statusColor = 'secondary';
+    var iconClass = 'fa-circle';
 
-            // Icon ng Status
-            historyHtml += '  <div class="mr-3 position-relative" style="z-index: 2;">';
-            historyHtml += '    <span class="badge badge-' + (statusColor.includes('text-dark') ? 'warning' : statusColor) + ' rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width: 24px; height: 24px;">';
-            historyHtml += '      <i class="fas ' + iconClass + '" style="font-size: 11px;"></i>';
-            historyHtml += '    </span>';
-            historyHtml += '  </div>';
+    if (hRow.lead_status === 'New Lead') {
+        statusColor = 'warning text-dark';
+        iconClass = 'fa-star';
+    } else if (hRow.lead_status === 'Converted') {
+        statusColor = 'success';
+        iconClass = 'fa-check-circle';
+    } else if (hRow.lead_status) {
+        statusColor = 'info';
+        iconClass = 'fa-comments';
+    }
 
-            // Detalye ng Log (Kanan)
-            historyHtml += '  <div class="flex-grow-1 bg-light rounded p-3 shadow-xs" style="border-left: 4px solid var(--' + (statusColor.includes('text-dark') ? 'warning' : statusColor) + ');">';
-            historyHtml += '    <div class="d-flex justify-content-between align-items-center mb-1">';
-            historyHtml += '      <span class="badge badge-' + statusColor + ' px-2 py-1 text-uppercase font-weight-bold" style="font-size: 9px;">' + (hRow.lead_status ?? 'No Status') + '</span>';
-            historyHtml += '      <small class="text-muted font-italic"><i class="far fa-clock mr-1"></i>' + (hRow.update_date ?? '-') + '</small>';
-            historyHtml += '    </div>';
-            historyHtml += '    <p class="mb-2 text-dark font-weight-normal font-sm" style="font-size: 12px; line-height: 1.4;">' + (hRow.description ?? 'No description provided.') + '</p>';
-            historyHtml += '    <div class="text-right border-top pt-1 mt-1" style="border-color: #e9ecef !important;">';
-            historyHtml += '      <small class="text-secondary font-weight-bold" style="font-size: 10px;"><i class="fas fa-user-edit mr-1"></i>By: ' + (hRow.user_name ? hRow.user_name : (hRow.updated_by ?? '-')) + '</small>';
-            historyHtml += '    </div>';
-            historyHtml += '  </div>';
-            
-            historyHtml += '</div>'; // Wakas ng isang item
+    // Timeline Item
+    historyHtml += '<div class="timeline-item d-flex mb-4 position-relative">';
+
+    // Vertical Line
+    if (i < historyData.length - 1) {
+        historyHtml += '<div class="position-absolute bg-light" style="width:2px; top:24px; bottom:-24px; left:11px; z-index:1;"></div>';
+    }
+
+    // Timeline Icon
+    historyHtml += '<div class="mr-3 position-relative" style="z-index:2;">';
+    historyHtml += '<span class="badge badge-' + (statusColor.includes('text-dark') ? 'warning' : statusColor) + ' rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width:24px; height:24px;">';
+    historyHtml += '<i class="fas ' + iconClass + '" style="font-size:11px;"></i>';
+    historyHtml += '</span>';
+    historyHtml += '</div>';
+
+    // Card
+    historyHtml += '<div class="flex-grow-1 bg-light rounded p-3 shadow-xs" style="border-left:4px solid var(--' + (statusColor.includes('text-dark') ? 'warning' : statusColor) + ');">';
+
+    // Header
+    historyHtml += '<div class="d-flex justify-content-between align-items-center mb-1">';
+    historyHtml += '<span class="badge badge-' + statusColor + ' px-2 py-1 text-uppercase font-weight-bold" style="font-size:9px;">';
+    historyHtml += (hRow.lead_status ?? 'No Status');
+    historyHtml += '</span>';
+
+    historyHtml += '<small class="text-muted font-italic">';
+    historyHtml += '<i class="far fa-clock mr-1"></i>';
+    historyHtml += (hRow.update_date ?? '-');
+    historyHtml += '</small>';
+    historyHtml += '</div>';
+
+    // Description
+    historyHtml += '<p class="mb-2 text-dark" style="font-size:12px; line-height:1.4;">';
+    historyHtml += (hRow.description ?? 'No description provided.');
+    historyHtml += '</p>';
+
+    // ==========================
+    // Products Inquiry
+    // ==========================
+    if (hRow.lead_status === 'Interested' && products.length > 0) {
+
+        historyHtml += '<div class="mb-2">';
+        historyHtml += '<small class="font-weight-bold text-primary">';
+        historyHtml += '<i class="fas fa-box-open mr-1"></i> Products Inquiry';
+        historyHtml += '</small><br>';
+
+        $.each(products, function(index, p) {
+
+            historyHtml += '<span class="badge badge-warning mr-1 mb-1">';
+            historyHtml += p.name;
+            historyHtml += '</span>';
+
         });
+
+        historyHtml += '</div>';
+    }
+
+    // Updated By
+    historyHtml += '    <div class="text-right border-top pt-1 mt-1" style="border-color: #e9ecef !important;">';
+    historyHtml += '      <small class="text-secondary font-weight-bold" style="font-size:10px;">';
+    historyHtml += '      <i class="fas fa-user-edit mr-1"></i>By: ' + (hRow.user_name ? hRow.user_name : (hRow.updated_by ?? '-')) + '</small>';
+    historyHtml += '    </div>';
+
+    historyHtml += '</div>'; // End Card
+    historyHtml += '</div>'; // End Timeline Item
+
+});
 
         historyHtml += '</div>'; // Wakas ng Container
         
@@ -783,11 +876,23 @@ $('.view-files-btn').click(function() {
 //Use to update status of attendees
 $('#saveStatus').click(function(){
 
-    var id            = $('#company_id').val();
-    var lead_status   = $('#lead_status').val();
-    var description   = $('#description').val();
-    var files         = $('#signed_proposal_file')[0].files;
-    var customer_code = $('#customer_code').val();
+    var id              = $('#company_id').val();
+    var lead_status     = $('#lead_status').val();
+    var product_inquiry = $('#product_inquiry').val();          // array
+    var ReasonOfLost    = $('#ReasonOfLost').val();
+    var description     = $('#description').val();
+    var files           = $('#signed_proposal_file')[0].files;
+    var customer_code   = $('#customer_code').val();
+
+
+    if (lead_status == 11 && !ReasonOfLost) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'File Required',
+            text: 'Please select Reason for Leads Lost.'
+        });
+        return;
+    }
 
     // Required only if status = 9
     if (lead_status == 9 && files.length === 0) {
@@ -811,8 +916,16 @@ $('#saveStatus').click(function(){
     let formData = new FormData();
     formData.append('_token', '{{ csrf_token() }}');
     formData.append('status', lead_status);
+    
+    formData.append('ReasonOfLost', ReasonOfLost);
     formData.append('description', description);
     formData.append('customer_code', customer_code);
+
+    if (product_inquiry) {
+    product_inquiry.forEach(function(productId) {
+        formData.append('product_inquiry[]', productId);
+    });
+}
 
     // Attach files only if exists
     for (let i = 0; i < files.length; i++) {
@@ -830,13 +943,12 @@ $('#saveStatus').click(function(){
 
             $('#company_id').val('');
             $('#lead_status').val('').trigger('change');
+            $('#ReasonOfLost').val('').trigger('change');
             $('#description').val('');
             $('#customer_code').val('');
             $('#signed_proposal_file').val('');
             $('#signedProposalFileWrapper').hide();
             $('#customerCodeWrapper').hide();
-
-
             $('#statusModal').modal('hide');
 
             Swal.fire({
@@ -883,8 +995,8 @@ $('#saveStatus').click(function(){
 });
 
 //Use to open the modal of Updating status
-    $(document).on('click', '#UpdateStatus', function(){
-//alert('Test');
+$(document).on('click', '#UpdateStatus', function()
+{
  var id            = $(this).data('id');
  var cname         = $(this).data('cname');
  var lead_status   = $(this).data('lead_status');
@@ -927,10 +1039,23 @@ $(document).on('click', '#UpdateContact', function(){
 
 
 
+//Para sa Selection ng Status updates
 
 $('#lead_status').on('change', function () {
     let selected_lead_status = $(this).val();
-console.log(selected_lead_status);
+//console.log(selected_lead_status);
+
+    if (selected_lead_status == 4) {
+        $('#ProductInquiryDiv').show();
+        $('#product_inquiry').prop('required', true);
+    } 
+    else {
+        $('#ProductInquiryDiv').hide();
+        $('#product_inquiry').prop('required', false);
+        $('#product_inquiry').val('');
+    }
+
+
     if (selected_lead_status == 9) {
         $('#signedProposalFileWrapper').show();
         $('#signed_proposal_file').prop('required', true);
@@ -949,6 +1074,16 @@ console.log(selected_lead_status);
         $('#customerCodeWrapper').hide();
         $('#customer_code').prop('required', false);
         $('#customer_code').val('');
+    }
+
+     if (selected_lead_status == 11) {
+        $('#ReasonOfLostDiv').show();
+        $('#ReasonOfLost').prop('required', true);
+    } 
+    else {
+        $('#ReasonOfLostDiv').hide();
+        $('#ReasonOfLost').prop('required', false);
+        $('#ReasonOfLost').val('');
     }
 
     
@@ -1077,12 +1212,7 @@ console.log(company_id)
     $('#company_name').text(company_name);
     $('#company_id').val(company_id);
     $('#status').val(status);
-
-     $('#ContactAddress').text(caddress);
-
-    
-
-    
+    $('#ContactAddress').text(caddress);
     $('#AddressModal').modal('show');
 });
 

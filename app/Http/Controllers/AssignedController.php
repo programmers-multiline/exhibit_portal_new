@@ -25,6 +25,8 @@ use Illuminate\Support\Facades\Mail;
 use App\Models\User;
 use App\Models\ParticipantFile;
 use App\Models\product_list;
+use App\Models\ProductInquiryLog;
+
 
 
 
@@ -126,7 +128,9 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
  $lead_agent_status = DB::table('lead_agent_status')->get();
  $user_group        = DB::table('users')->where('group_id',$user->emp_id)->get();
  $contact_files     = DB::table('contacts_files')->get();
-
+ $lost_reason       = DB::table('opportunity_lost_reason_list')->get();
+ $products          = DB::table('product')->get();
+	
  //use to refresh the Card page
  if ($request->ajax()) {
     return response()->json([
@@ -134,7 +138,7 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
     ]);
 }
 
-return view('assigned.index', compact('companies','lead_agent_status','user_group','user','contact_files','exhibits', 'selectedExhibit'));
+return view('assigned.index', compact('companies','lead_agent_status','user_group','user','contact_files','exhibits', 'selectedExhibit', 'lost_reason','products'));
  
    
 
