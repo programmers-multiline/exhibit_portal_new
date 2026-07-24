@@ -146,8 +146,23 @@ $(document).ready(function() {
                 
               if(response.length > 0) {
                             $.each(response, function(index, row) {
+
+                                var badgeClass2 = 'badge-secondary';
+                                var customStyle = ''; // Gagawa ng lalagyan para sa custom color style
+
+                                if (row.contact_source === 'Inquiry') {
+                                    // Pwede mong palitan ang hex color base sa shade ng pink na gusto mo
+                                    customStyle = 'style="background-color: #e685b5; color: white;"'; 
+                                } else if (row.contact_source === 'PhilConstruct') {
+                                    badgeClass2 = 'badge-success';
+                                } else if (row.contact_source) {
+                                    badgeClass2 = 'badge-info';
+                                }
+
                                 html += '<tr>';
-                                html += '<td class="text-left font-weight-bold text-dark">' + (row.company_name ?? '-') + '</td>';
+                                // Idagdag ang customStyle variable sa loob ng <span> tag
+                                html += '<td class="text-left "><span class="badge ' + badgeClass2 + ' px-2 py-1" ' + customStyle + '>' + (row.contact_source ?? 'No Status') + '</span><br><span class="font-weight-bold text-dark">' + (row.company_name ?? '-') + '</span></td>';
+
                                 html += '<td class="text-left">' + (row.address ?? '-') + '</td>';
                                 
                                 // Lagyan natin ng kulay ang Badge base sa status para mas magandang tingnan

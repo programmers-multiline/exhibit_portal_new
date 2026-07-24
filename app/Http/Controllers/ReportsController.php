@@ -106,7 +106,20 @@ public function getCompanyHistory(Request $request)
         ->orderBy('c.update_date', 'desc') // Pinakabagong update ang nasa itaas
         ->get();
 
-    return response()->json($history);
+      $product_inquiry = DB::table('product_inquiry_logs as pi')
+                        ->leftJoin('product as p', 'pi.product_id', '=', 'p.id')
+                        ->select(
+                            'pi.company_id',
+                            'pi.product_id',
+                            'p.name',      // palitan kung iba ang column name
+                            'pi.product_remarks'
+                        )
+                        ->where('pi.company_id', $companyId)
+                        ->get();
+
+    //return response()->json($history,$product_inquiry);
+    return response()->json(['history'  => $history, 'products' => $product_inquiry
+]);
 }
 
 
@@ -132,10 +145,12 @@ $agentReports = DB::table('users as u')
         $join->on('cu.company_id', '=', 'a.company_id');
     })
     ->leftJoin('lead_agent_status as l', 'l.id', '=', 'cu.status')
+   
     ->select(
         'u.name as agent_name', // Kinuha sa users table
         'u.emp_id as psc_emp_id',
         'u.group_id as group_id',
+      
         DB::raw('COUNT(DISTINCT a.company_id) as total_assigned'),
         DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status = 'New Lead' THEN a.company_id END) as total_new_lead"),
         DB::raw("COUNT(DISTINCT CASE WHEN l.lead_status NOT IN ('New Lead', 'Converted') AND l.lead_status IS NOT NULL THEN a.company_id END) as total_active_leads"),
@@ -199,9 +214,11 @@ $agentReports = DB::table('users as u')
                     ->where('StatusUpdate.rn', '=', 1);
             })
             ->leftJoin('lead_agent_status as l', 'l.id', '=', 'StatusUpdate.status')
+            ->leftJoin('contacts as co','co.company_id','=','c.id')
             ->select([
                 'a.psc_emp_id',
                 'c.company_name',
+                'co.exhibit_name as contact_source',
                 'c.id as company_id',
                 'c.address',
                 'l.lead_status',
