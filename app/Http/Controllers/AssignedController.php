@@ -39,6 +39,8 @@ class AssignedController extends Controller
         {
         $user       = Auth::user();
 
+       // dd($user);
+
         // 1. Kunin ang lahat ng unique na exhibit_name para sa dropdown
             $exhibits = DB::table('contacts')
                 ->whereNotNull('exhibit_name')
@@ -129,7 +131,7 @@ $companies = collect($rawResults)->groupBy('company_id')->map(function ($rows) {
  $user_group        = DB::table('users')->where('group_id',$user->emp_id)->get();
  $contact_files     = DB::table('contacts_files')->get();
  $lost_reason       = DB::table('opportunity_lost_reason_list')->get();
- $products          = DB::table('product')->get();
+ $products          = DB::table('product')->where('company_id',$user->company_id)->get();
 	
  //use to refresh the Card page
  if ($request->ajax()) {

@@ -145,6 +145,8 @@ $(document).ready(function() {
                 var html = '';
                 
               if(response.length > 0) {
+
+              console.log(response);
                             $.each(response, function(index, row) {
 
                                 var badgeClass2 = 'badge-secondary';
@@ -209,8 +211,9 @@ $(document).ready(function() {
 });
 
 // Listener para sa pag-click ng History Icon
-$(document).on('click', '.updatehistory-btn', function() {
+/* $(document).on('click', '.updatehistory-btn', function() {
     var companyId = $(this).data('companyid');
+   // console.log(companyId);
     
     // Loading state sa loob ng History Modal Body
     $('#ViewUpdateHistory .modal-body').html('<div class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Loading history logs...</div>');
@@ -222,12 +225,22 @@ $(document).on('click', '.updatehistory-btn', function() {
         type: "GET",
         data: { company_id: companyId },
         dataType: "json",
-       success: function(historyData) {
+      success: function(response) {
+
+    console.log(response);
+
+    var historyData = response.history;
+    var products = response.products;
+
+    console.log(historyData);
+
     if(historyData.length > 0) {
-        // Palitan ang pamagat ng Modal base sa unang nahanap na pangalan ng Kumpanya
-        $('#ViewUpdateHistory .modal-header h5').html('<i class="fas fa-history mr-2"></i> Update History: ' + historyData[0].company_name);
-        
-        // Simula ng Timeline Container
+
+        $('#ViewUpdateHistory .modal-header h5').html(
+            '<i class="fas fa-history mr-2"></i> Update History: ' +
+            historyData[0].company_name
+        );
+
         var historyHtml = '<div class="timeline-container px-2">';
 
         $.each(historyData, function(i, hRow) {
@@ -288,6 +301,151 @@ $(document).on('click', '.updatehistory-btn', function() {
             $('#ViewUpdateHistory .modal-body').html('<p class="text-center text-danger">Failed to fetch history. Please try again.</p>');
         }
     });
+}); */
+
+$(document).on('click', '.updatehistory-btn', function () {
+
+    var companyId = $(this).data('companyid');
+
+    $('#ViewUpdateHistory .modal-body').html(
+        '<div class="text-center py-4"><i class="fas fa-spinner fa-spin mr-2"></i> Loading history logs...</div>'
+    );
+
+    $('#ViewUpdateHistory').modal('show');
+
+    $.ajax({
+        url: "{{ route('reports.company.history') }}",
+        type: "GET",
+        data: {
+            company_id: companyId
+        },
+        dataType: "json",
+
+        success: function (response) {
+
+            var historyData = response.history || [];
+            var products = response.products || [];
+
+            if (historyData.length > 0) {
+
+                $('#ViewUpdateHistory .modal-header h5').html(
+                    '<i class="fas fa-history mr-2"></i> Update History: ' +
+                    historyData[0].company_name
+                );
+
+                var historyHtml = '<div class="timeline-container px-2">';
+
+                $.each(historyData, function (i, hRow) {
+
+                    var statusColor = 'info';
+                    var badgeColor = 'info';
+                    var borderColor = '#17a2b8';
+                    var iconClass = 'fa-comments';
+
+                    if (hRow.lead_status === 'New Lead') {
+                        badgeColor = 'warning';
+                        statusColor = 'warning text-dark';
+                        borderColor = '#ffc107';
+                        iconClass = 'fa-star';
+                    }
+                    else if (hRow.lead_status === 'Converted') {
+                        badgeColor = 'success';
+                        statusColor = 'success';
+                        borderColor = '#28a745';
+                        iconClass = 'fa-check-circle';
+                    }
+                    else if (hRow.lead_status === 'Follow-up Needed') {
+                        badgeColor = 'danger';
+                        statusColor = 'danger';
+                        borderColor = '#dc3545';
+                        iconClass = 'fa-phone';
+                    }
+
+                    historyHtml += '<div class="timeline-item d-flex mb-4 position-relative">';
+
+                    if (i < historyData.length - 1) {
+                        historyHtml += '<div class="position-absolute bg-light" style="width:2px;top:24px;bottom:-24px;left:11px;z-index:1;"></div>';
+                    }
+
+                    historyHtml += '<div class="mr-3 position-relative" style="z-index:2;">';
+                    historyHtml += '<span class="badge badge-' + badgeColor + ' rounded-circle d-flex align-items-center justify-content-center shadow-sm" style="width:24px;height:24px;">';
+                    historyHtml += '<i class="fas ' + iconClass + '" style="font-size:11px;"></i>';
+                    historyHtml += '</span>';
+                    historyHtml += '</div>';
+
+                    historyHtml += '<div class="flex-grow-1 bg-light rounded p-3" style="border-left:4px solid ' + borderColor + ';">';
+
+                    historyHtml += '<div class="d-flex justify-content-between align-items-center mb-2">';
+                    historyHtml += '<span class="badge badge-' + badgeColor + '">' + (hRow.lead_status || 'No Status') + '</span>';
+                    historyHtml += '<small class="text-muted"><i class="far fa-clock mr-1"></i>' + (hRow.update_date || '-') + '</small>';
+                    historyHtml += '</div>';
+
+                    historyHtml += '<p class="mb-2" style="font-size:13px;">';
+                    historyHtml += (hRow.description || 'No description provided.');
+                    historyHtml += '</p>';
+
+                    //==========================
+                    // PRODUCTS
+                    //==========================
+
+                                    // Show products ONLY when status is Interested
+                    if (hRow.lead_status === 'Interested' && products.length > 0) {
+
+                        historyHtml += '<div class="mt-3">';
+                        historyHtml += '<small class="text-muted d-block mb-2">';
+                        historyHtml += '<i class="fas fa-box-open mr-1"></i><b>Products Inquiry</b>';
+                        historyHtml += '</small>';
+
+                        $.each(products, function (index, p) {
+                            historyHtml += '<span class="badge badge-primary mr-1 mb-1">' +
+                                            p.name +
+                                        '</span>';
+                        });
+
+                        historyHtml += '</div>';
+                    }
+
+                    historyHtml += '<div class="text-right border-top pt-2 mt-3">';
+                    historyHtml += '<small class="text-secondary">';
+                    historyHtml += '<i class="fas fa-user-edit mr-1"></i>';
+                    historyHtml += 'By: ' + (hRow.user_name || hRow.updated_by);
+                    historyHtml += '</small>';
+                    historyHtml += '</div>';
+
+                    historyHtml += '</div>';
+                    historyHtml += '</div>';
+
+                });
+
+                historyHtml += '</div>';
+
+                $('#ViewUpdateHistory .modal-body').html(historyHtml);
+
+            } else {
+
+                $('#ViewUpdateHistory .modal-body').html(
+                    '<div class="text-center py-4 text-muted">' +
+                    '<i class="fas fa-folder-open fa-2x mb-2 d-block"></i>' +
+                    'No history logs found.' +
+                    '</div>'
+                );
+
+            }
+
+        },
+
+        error: function () {
+
+            $('#ViewUpdateHistory .modal-body').html(
+                '<div class="text-center text-danger py-4">' +
+                '<i class="fas fa-exclamation-circle mr-2"></i>Failed to fetch history.' +
+                '</div>'
+            );
+
+        }
+
+    });
+
 });
 
 
