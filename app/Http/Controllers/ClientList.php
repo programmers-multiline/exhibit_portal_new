@@ -25,7 +25,7 @@ class ClientList extends Controller
 
         public function getExternalData()
         {
-            $response = Http::get('https://spr.multi-linegroupofcompanies.com/5ms/customer_list_json.php');
+            $response = Http::get('http://www.spr.multi-linegroupofcompanies.com/5ms/customer_list_json.php');
 
             if ($response->successful()) {
                 $customers = $response->json(); // Ito ay magiging PHP Array
