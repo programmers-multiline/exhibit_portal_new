@@ -209,6 +209,12 @@ Route::post('/inquiry/bulk-assign',[ContactImportController::class, 'bulkAssignI
 
 
 
+use App\Http\Controllers\ClientList;
+Route::get('/customers', [ClientList::class, 'getExternalData']);
+
+
+
+
 
 
 
