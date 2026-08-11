@@ -31,7 +31,8 @@ class ClientList extends Controller
                 $customers = $response->json(); // Ito ay magiging PHP Array
                 
                 // Ipapasa natin ang array sa blade view na may pangalang 'customers'
-                return view('customers', compact('customers'));
+               // return view('customers', compact('customers'));
+                 return response()->json($data); 
             }
 
             return abort(500, 'Hindi makakuha ng data mula sa external API.');
